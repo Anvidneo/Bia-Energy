@@ -1,0 +1,13 @@
+# Backend
+backend/api
+backend/*.exe
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Env
+.env
+
+# OS
+.DS_Store

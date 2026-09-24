@@ -1,26 +1,48 @@
-// Command api is the entrypoint of the Bia Energy backend.
-//
-// This is today's (Thursday) skeleton only: it exposes a single health
-// check so docker-compose and CI have something real to build and run
-// against. Friday's work wires this up to internal/config, internal/db
-// (connect + seed) and mounts the internal/api router with the real
-// endpoints.
+// Command api is the entrypoint of the Bia Energy backend: loads config,
+// connects to Postgres, applies the schema, seeds readings.csv/events.csv
+// if the tables are empty, and serves the HTTP API.
 package main
 
 import (
 	"log"
 	"net/http"
+
+	"bia-energy/backend/internal/ai"
+	"bia-energy/backend/internal/api"
+	"bia-energy/backend/internal/config"
+	"bia-energy/backend/internal/db"
+	"bia-energy/backend/internal/seed"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok","service":"bia-energy-api"}`))
-	})
+	cfg := config.Load()
 
-	addr := ":8080"
-	log.Printf("bia-energy-api skeleton listening on %s (health check only)", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	conn, err := db.Connect(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("connecting to database: %v", err)
+	}
+	defer conn.Close()
+
+	if err := db.ApplySchema(conn); err != nil {
+		log.Fatalf("applying schema: %v", err)
+	}
+
+	if err := seed.Load(conn, "data/readings.csv", "data/events.csv"); err != nil {
+		log.Fatalf("seeding database: %v", err)
+	}
+
+	var explainer ai.Explainer = ai.RuleExplainer{}
+	if cfg.UseLLMExplainer {
+		// Sunday stretch goal: swap in ai.LLMExplainer here once it
+		// exists. Falling back to RuleExplainer keeps the service
+		// working even if USE_LLM_EXPLAINER is set before that lands.
+		log.Println("USE_LLM_EXPLAINER=true but LLMExplainer isn't built yet; using RuleExplainer")
+	}
+
+	deps := &api.Deps{DB: conn, Explainer: explainer}
+	router := api.NewRouter(deps)
+
+	addr := ":" + cfg.Port
+	log.Printf("bia-energy-api listening on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, router))
 }

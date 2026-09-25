@@ -4,7 +4,7 @@ import { getDashboardSummary, listAnomalies, getMeterReadings, listMeters } from
 import { RingKpi } from './RingKpi'
 import { AnomaliesTable } from './AnomaliesTable'
 import { ConsumptionChart } from './ConsumptionChart'
-import { dotColorVar, tintColorVar, typeLabel, formatRelative } from './severity'
+import { dotColorVar, tintColorVar, typeLabel, formatRelative, formatKwh } from './severity'
 
 interface Props {
   onSelectAnomaly: (a: Anomaly) => void
@@ -15,6 +15,7 @@ export function Dashboard({ onSelectAnomaly }: Props) {
   const [anomalies, setAnomalies] = useState<Anomaly[] | null>(null)
   const [chartMeter, setChartMeter] = useState<string | null>(null)
   const [readings, setReadings] = useState<Reading[] | null>(null)
+  const [totalConsumptionKwh, setTotalConsumptionKwh] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -26,11 +27,20 @@ export function Dashboard({ onSelectAnomaly }: Props) {
         setAnomalies(anomalyData)
         const meterId = anomalyData[0]?.meter_id ?? meters[0]?.id ?? null
         setChartMeter(meterId)
-        if (meterId) {
-          return getMeterReadings(meterId).then((r) => {
-            if (!cancelled) setReadings(r.slice(-24))
-          })
-        }
+
+        const chartPromise = meterId
+          ? getMeterReadings(meterId).then((r) => { if (!cancelled) setReadings(r.slice(-24)) })
+          : Promise.resolve()
+
+        // Consumo total del periodo (sección 5 de la prueba): suma de todas
+        // las lecturas de todos los medidores. Se pide aparte de la gráfica
+        // porque necesita el histórico completo, no solo las últimas 24h.
+        const totalPromise = Promise.all(meters.map((m) => getMeterReadings(m.id))).then((all) => {
+          if (cancelled) return
+          setTotalConsumptionKwh(all.flat().reduce((sum, r) => sum + r.consumption_kwh, 0))
+        })
+
+        return Promise.all([chartPromise, totalPromise])
       })
       .catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
@@ -42,6 +52,11 @@ export function Dashboard({ onSelectAnomaly }: Props) {
   const activeAnomalies = anomalies?.length ?? summary?.active_anomalies ?? 0
   const criticalCount = anomalies?.filter((a) => a.severity === 'HIGH' && a.type !== 'FALSE_POSITIVE').length ?? 0
   const dataQualityCount = anomalies?.filter((a) => a.type === 'DATA_QUALITY').length ?? 0
+  // Confianza IA (sección 5): métrica agregada — promedio de confianza entre
+  // todas las anomalías detectadas.
+  const avgConfidence = anomalies && anomalies.length > 0
+    ? anomalies.reduce((sum, a) => sum + a.confidence, 0) / anomalies.length
+    : null
 
   const pct = (count: number) => (totalMeters > 0 ? Math.min(100, (count / totalMeters) * 100) : 0)
 
@@ -75,6 +90,14 @@ export function Dashboard({ onSelectAnomaly }: Props) {
           color="var(--accent)"
         />
         <RingKpi
+          label="Consumo total"
+          value={formatKwh(totalConsumptionKwh)}
+          sub="Periodo completo"
+          percent={100}
+          trackColor="#DCEBFC"
+          color="var(--accent)"
+        />
+        <RingKpi
           label="Anomalías activas"
           value={activeAnomalies}
           sub={`En ${totalMeters} medidores`}
@@ -89,6 +112,14 @@ export function Dashboard({ onSelectAnomaly }: Props) {
           percent={pct(criticalCount)}
           trackColor="var(--crit-tint)"
           color="var(--crit)"
+        />
+        <RingKpi
+          label="Confianza IA"
+          value={avgConfidence !== null ? `${Math.round(avgConfidence * 100)}%` : '—'}
+          sub="Métrica agregada"
+          percent={avgConfidence !== null ? avgConfidence * 100 : 0}
+          trackColor="var(--good-tint)"
+          color="var(--good)"
         />
         <RingKpi
           label="Calidad de datos"

@@ -53,6 +53,18 @@ export function tintColorVar(a: Pick<Anomaly, 'type' | 'severity'>): string {
   return 'var(--good-tint)'
 }
 
+// Compartido por la tabla de Medidores y el resumen del detalle de medidor
+// para que ambos formateen consumo/variación exactamente igual.
+export function formatKwh(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(2)} kWh`
+}
+
+export function formatPct(value: number | null): string {
+  if (value === null) return '—'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}
+
 export function formatTime(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleString('es-CO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })

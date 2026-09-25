@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MetersTable } from './MetersTable'
-import { listMeters, listAnomalies } from '../api'
+import { listMeters, listAnomalies, getMeterReadings } from '../api'
 import { useMediaQuery } from '../hooks'
-import type { Anomaly, Meter } from '../types'
+import type { Anomaly, Meter, Reading } from '../types'
 
 vi.mock('../api')
 vi.mock('../hooks', () => ({
@@ -41,6 +41,7 @@ const ANOMALIES: Anomaly[] = [
 beforeEach(() => {
   vi.mocked(listMeters).mockResolvedValue(METERS)
   vi.mocked(listAnomalies).mockResolvedValue(ANOMALIES)
+  vi.mocked(getMeterReadings).mockResolvedValue([])
   vi.mocked(useMediaQuery).mockReturnValue(false)
 })
 
@@ -118,6 +119,46 @@ describe('MetersTable (desktop)', () => {
     await screen.findByText('M-101')
     fireEvent.click(screen.getByText('M-101'))
     expect(onSelectMeter).toHaveBeenCalledWith('M-101')
+  })
+
+  it('calls onSelectMeter once (not twice) when the desktop "Ver detalle" link is clicked', async () => {
+    const onSelectMeter = vi.fn()
+    render(<MetersTable onSelectMeter={onSelectMeter} />)
+    await screen.findByText('M-101')
+    fireEvent.click(screen.getAllByText('Ver detalle')[0])
+    expect(onSelectMeter).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows Consumo and Variación per meter, fetched from each meter\'s own readings', async () => {
+    const reading = (meter_id: string, consumption_kwh: number): Reading => ({
+      meter_id, timestamp: '2026-09-01T00:00:00Z', consumption_kwh, voltage_v: 220, current_a: 5, power_factor: 0.95,
+    })
+    vi.mocked(getMeterReadings).mockImplementation((meterId: string) => {
+      if (meterId === 'M-102') return Promise.resolve([reading('M-102', 200)]) // vs. baseline 100 (from its anomaly) => +100%
+      return Promise.resolve([reading(meterId, 10)])
+    })
+
+    render(<MetersTable onSelectMeter={() => {}} />)
+    await screen.findByText('M-101')
+
+    const bodyRow = (index: number) => screen.getAllByRole('row').slice(1)[index]
+    expect(within(bodyRow(0)).getByText('10.00 kWh')).toBeTruthy() // M-101, no anomaly => baseline = median = 10
+    expect(within(bodyRow(0)).getByText('0.0%')).toBeTruthy()
+    expect(within(bodyRow(1)).getByText('200.00 kWh')).toBeTruthy() // M-102
+    expect(within(bodyRow(1)).getByText('+100.0%')).toBeTruthy()
+  })
+
+  it('sorts by consumption when that header is clicked', async () => {
+    vi.mocked(getMeterReadings).mockImplementation((meterId: string) => {
+      const byId: Record<string, number> = { 'M-101': 5, 'M-102': 50, 'M-103': 25 }
+      return Promise.resolve([{ meter_id: meterId, timestamp: '2026-09-01T00:00:00Z', consumption_kwh: byId[meterId], voltage_v: 220, current_a: 5, power_factor: 0.95 }])
+    })
+    render(<MetersTable onSelectMeter={() => {}} />)
+    await screen.findByText('M-101')
+
+    fireEvent.click(screen.getByText('CONSUMO'))
+    const bodyRow = (index: number) => screen.getAllByRole('row').slice(1)[index]
+    expect(within(bodyRow(0)).getByText('M-101')).toBeTruthy() // 5 kWh, lowest, ascending first
   })
 })
 

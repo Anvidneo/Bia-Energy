@@ -2,23 +2,13 @@ import { useEffect, useState } from 'react'
 import type { Anomaly, Reading } from '../types'
 import { getMeterReadings, listAnomalies } from '../api'
 import { ConsumptionChart } from './ConsumptionChart'
-import { pillClass, typeLabel, formatTime, meterStatusBadge } from './severity'
+import { pillClass, typeLabel, formatTime, meterStatusBadge, formatKwh, formatPct } from './severity'
 import { computeMeterStats } from './meterStats'
 
 interface Props {
   meterId: string
   onBack: () => void
   onSelectAnomaly: (a: Anomaly) => void
-}
-
-function formatKwh(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} kWh`
-}
-
-function formatPct(value: number | null): string {
-  if (value === null) return '—'
-  const sign = value > 0 ? '+' : ''
-  return `${sign}${value.toFixed(1)}%`
 }
 
 // Keyed by meterId in the parent (see App.tsx), so this remounts — and

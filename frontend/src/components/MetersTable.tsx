@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Anomaly, Meter } from '../types'
-import { listMeters, listAnomalies } from '../api'
+import type { Anomaly, Meter, Reading } from '../types'
+import { listMeters, listAnomalies, getMeterReadings } from '../api'
 import { useMediaQuery, MOBILE_BREAKPOINT } from '../hooks'
 import { IconSearch } from '../icons'
-import { meterStatusBadge, formatTime } from './severity'
+import { meterStatusBadge, formatTime, formatKwh, formatPct } from './severity'
 import {
   buildMeterRows, filterMeterRows, sortMeterRows,
   type MeterRow, type SortKey, type SortDirection, type StatusFilter,
@@ -21,6 +21,8 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'id', label: 'MEDIDOR' },
+  { key: 'consumption', label: 'CONSUMO' },
+  { key: 'variation', label: 'VARIACIÓN' },
   { key: 'anomalyCount', label: 'ANOMALÍAS' },
   { key: 'severity', label: 'ESTADO' },
   { key: 'lastDetectedAt', label: 'ÚLTIMA DETECCIÓN' },
@@ -37,6 +39,7 @@ function MeterStatusPill({ row }: { row: MeterRow }) {
 export function MetersTable({ onSelectMeter }: Props) {
   const [meters, setMeters] = useState<Meter[] | null>(null)
   const [anomalies, setAnomalies] = useState<Anomaly[] | null>(null)
+  const [readingsByMeter, setReadingsByMeter] = useState<Record<string, Reading[]> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<StatusFilter>('all')
@@ -51,6 +54,15 @@ export function MetersTable({ onSelectMeter }: Props) {
         if (cancelled) return
         setMeters(meterData)
         setAnomalies(anomalyData)
+        // Consumo/Variación (sección 6 de la prueba) necesitan la lectura
+        // más reciente de cada medidor — se piden aparte porque la tabla
+        // ya puede mostrar anomalías/estado sin esperar por esto.
+        return Promise.all(meterData.map((m) => getMeterReadings(m.id))).then((allReadings) => {
+          if (cancelled) return
+          const byMeter: Record<string, Reading[]> = {}
+          meterData.forEach((m, i) => { byMeter[m.id] = allReadings[i] })
+          setReadingsByMeter(byMeter)
+        })
       })
       .catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
@@ -58,10 +70,10 @@ export function MetersTable({ onSelectMeter }: Props) {
 
   const rows = useMemo(() => {
     if (!meters || !anomalies) return null
-    const built = buildMeterRows(meters, anomalies)
+    const built = buildMeterRows(meters, anomalies, readingsByMeter ?? {})
     const filtered = filterMeterRows(built, query, status)
     return sortMeterRows(filtered, sortBy, direction)
-  }, [meters, anomalies, query, status, sortBy, direction])
+  }, [meters, anomalies, readingsByMeter, query, status, sortBy, direction])
 
   const toggleSort = (key: SortKey) => {
     if (key === sortBy) {
@@ -115,7 +127,9 @@ export function MetersTable({ onSelectMeter }: Props) {
                 <span className="meter-id">{row.id}</span>
                 <MeterStatusPill row={row} />
               </div>
-              <span className="type-line">{row.anomalyCount} anomalía(s) detectada(s)</span>
+              <span className="type-line">
+                {formatKwh(row.consumptionKwh)} · {formatPct(row.variationPct)} · {row.anomalyCount} anomalía(s) detectada(s)
+              </span>
               <div className="row-bottom">
                 <span className="meta">{row.lastDetectedAt ? formatTime(row.lastDetectedAt) : 'Sin eventos'}</span>
                 <a href="#" onClick={(e) => { e.preventDefault(); onSelectMeter(row.id) }}>Ver detalle</a>
@@ -142,6 +156,8 @@ export function MetersTable({ onSelectMeter }: Props) {
             {rows.map((row) => (
               <tr key={row.id} className="clickable" onClick={() => onSelectMeter(row.id)}>
                 <td className="meter-cell">{row.id}</td>
+                <td>{formatKwh(row.consumptionKwh)}</td>
+                <td>{formatPct(row.variationPct)}</td>
                 <td>{row.anomalyCount}</td>
                 <td><MeterStatusPill row={row} /></td>
                 <td className="muted">{row.lastDetectedAt ? formatTime(row.lastDetectedAt) : '—'}</td>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Anomaly } from '../types'
 import {
   pillClass, typeLabel, severityLabel, dotColorVar, tintColorVar,
-  formatTime, formatRelative, meterStatusBadge,
+  formatTime, formatRelative, meterStatusBadge, formatKwh, formatPct,
 } from './severity'
 
 type Classifiable = Pick<Anomaly, 'type' | 'severity'>
@@ -108,5 +108,30 @@ describe('meterStatusBadge', () => {
   })
   it('delegates to pillClass/typeLabel for a false positive', () => {
     expect(meterStatusBadge(FALSE_POSITIVE)).toEqual({ className: 'pill pill-good', label: 'Falso positivo' })
+  })
+})
+
+describe('formatKwh', () => {
+  it('shows a dash for null', () => {
+    expect(formatKwh(null)).toBe('—')
+  })
+  it('formats to two decimal places with a unit', () => {
+    expect(formatKwh(12)).toBe('12.00 kWh')
+    expect(formatKwh(1070.456)).toBe('1070.46 kWh')
+  })
+})
+
+describe('formatPct', () => {
+  it('shows a dash for null', () => {
+    expect(formatPct(null)).toBe('—')
+  })
+  it('adds a leading + for positive values', () => {
+    expect(formatPct(103.7)).toBe('+103.7%')
+  })
+  it('keeps the sign for negative values', () => {
+    expect(formatPct(-12.3)).toBe('-12.3%')
+  })
+  it('adds no sign for exactly zero', () => {
+    expect(formatPct(0)).toBe('0.0%')
   })
 })

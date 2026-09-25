@@ -62,6 +62,22 @@ describe('Dashboard', () => {
     // KPI grid: the same "Calidad de datos" label also appears as an anomaly
     // type in the feed/table further down the page)
     expect(within(kpiGrid).getByText('Calidad de datos').closest('.kpi-card')?.textContent).toContain('1')
+    // Consumo total: suma de las lecturas de los 2 medidores (METERS),
+    // cada uno resuelto por el mock global de getMeterReadings a un único
+    // reading de 10 kWh => 20 kWh en total.
+    await screen.findByText('20.00 kWh')
+    expect(within(kpiGrid).getByText('Consumo total').closest('.kpi-card')?.textContent).toContain('20.00 kWh')
+    // Confianza IA: promedio de confidence entre las 3 anomalías (todas 0.9) => 90%
+    expect(within(kpiGrid).getByText('Confianza IA').closest('.kpi-card')?.textContent).toContain('90%')
+  })
+
+  it('shows a dash for Confianza IA when there are no anomalies yet', async () => {
+    vi.mocked(getDashboardSummary).mockResolvedValue(SUMMARY)
+    vi.mocked(listAnomalies).mockResolvedValue([])
+    render(<Dashboard onSelectAnomaly={() => {}} />)
+    await screen.findByText(/Sin anomalías todavía/)
+    const kpiGrid = document.querySelector('.kpi-grid') as HTMLElement
+    expect(within(kpiGrid).getByText('Confianza IA').closest('.kpi-card')?.textContent).toContain('—')
   })
 
   it('shows "Aún sin análisis ejecutado" when there is no last_analysis_at', async () => {

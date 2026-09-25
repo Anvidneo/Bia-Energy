@@ -1,0 +1,14 @@
+{
+  "name": "bia-energy",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Repo-root tooling only (commit-message linting). App code lives in backend/ and frontend/.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "husky": "^9.1.7"
+  }
+}

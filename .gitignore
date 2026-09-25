@@ -6,6 +6,9 @@ backend/*.exe
 frontend/node_modules/
 frontend/dist/
 
+# Root tooling (commitlint/husky)
+/node_modules/
+
 # Env
 .env
 

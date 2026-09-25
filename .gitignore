@@ -1,10 +1,12 @@
 # Backend
 backend/api
 backend/*.exe
+backend/coverage.out
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
 
 # Root tooling (commitlint/husky)
 /node_modules/

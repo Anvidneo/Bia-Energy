@@ -12,6 +12,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # Opts the internal/db integration tests in — see db_test.go.
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -36,6 +53,22 @@ jobs:
   sonarcloud:
     needs: [test-backend, test-frontend]
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,6 +95,25 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@59db25f34e16620e48ab4bb9e4a5dce155cb5432 # v8.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # The scan action above never fails just because the Quality Gate
+      # didn't pass — it only fails on a scanner/technical error. Without
+      # this step, deploy-backend/deploy-frontend would go ahead even with
+      # a failing gate, since they only depend on this job succeeding.
+      - name: SonarCloud Quality Gate check
+        id: quality-gate-check
+        uses: SonarSource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b # v1.2.0
+        timeout-minutes: 5
+        with:
+          pollingTimeoutSec: 300
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Fail the job if the Quality Gate didn't pass
+        if: steps.quality-gate-check.outputs.quality-gate-status != 'PASSED'
+        run: |
+          echo "Quality gate status: ${{ steps.quality-gate-check.outputs.quality-gate-status }}"
+          exit 1
 
   deploy-backend:
     name: Deploy backend (Render)

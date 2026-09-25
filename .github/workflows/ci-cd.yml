@@ -155,9 +155,22 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOY_ID="${{ steps.trigger.outputs.deploy_id }}"
+          URL="https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID"
           for _ in $(seq 1 60); do
-            STATUS=$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
-              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
+            # No -f here on purpose: on a non-2xx we want the response body
+            # (Render's error message) printed for diagnosis instead of a
+            # bare "curl: (22)" with no context.
+            RESPONSE=$(curl -sS -w $'\n%{http_code}' \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Accept: application/json" \
+              "$URL")
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "Render API returned HTTP $HTTP_CODE: $BODY"
+              exit 1
+            fi
+            STATUS=$(echo "$BODY" | jq -r '.status')
             echo "Status: $STATUS"
             case "$STATUS" in
               live) exit 0 ;;
@@ -205,6 +218,9 @@ jobs:
       - name: Build project artifacts
         env:
           NPM_CONFIG_PRODUCTION: "false"
-        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        # --debug temporarily added to see exactly what install command
+        # vercel build runs internally (its normal output never shows an
+        # install step at all, which is the actual mystery here).
+        run: vercel build --prod --debug --token="${{ secrets.VERCEL_TOKEN }}"
       - name: Deploy prebuilt output
         run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

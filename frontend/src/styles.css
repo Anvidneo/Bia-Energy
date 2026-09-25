@@ -155,7 +155,9 @@ input { font-family: inherit; }
   border: none;
   outline: none;
   background: transparent;
-  font-size: 13px;
+  /* Deliberately >=16px: below that, iOS Safari auto-zooms the viewport
+     on focus and never zooms back out on blur/submit. */
+  font-size: 16px;
   color: var(--text-2);
   width: 100%;
 }
@@ -190,23 +192,6 @@ input { font-family: inherit; }
   background: var(--surface);
   box-shadow: var(--shadow);
   color: var(--accent);
-}
-
-.icon-btn {
-  position: relative;
-  width: 40px; height: 40px;
-  border: none; border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-2);
-}
-
-.badge-dot {
-  position: absolute; top: 9px; right: 10px;
-  width: 8px; height: 8px;
-  border-radius: 999px;
-  background: var(--crit);
 }
 
 .avatar {

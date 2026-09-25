@@ -1,7 +1,7 @@
 import { useState, type ReactNode, type ReactElement } from 'react'
 import {
   IconBolt, IconDashboard, IconMeters, IconAnomalies, IconAnalysis, IconReports,
-  IconSearch, IconSun, IconMoon, IconBell, IconMenu, IconClose,
+  IconSearch, IconSun, IconMoon, IconMenu, IconClose,
 } from '../icons'
 import type { Theme } from '../hooks'
 
@@ -105,10 +105,6 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onL
             >
               {theme === 'light' ? <IconSun /> : <IconMoon />}
             </button>
-            <button aria-label="Notificaciones" className="mobile-icon-btn">
-              <IconBell size={15} />
-              <span aria-hidden="true" className="badge-dot" style={{ top: 7, right: 8, width: 7, height: 7 }} />
-            </button>
           </div>
         </header>
 
@@ -141,10 +137,6 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onL
                 <IconMoon />
               </button>
             </div>
-            <button aria-label="Notificaciones" className="icon-btn">
-              <IconBell />
-              <span aria-hidden="true" className="badge-dot" />
-            </button>
             {onLogout ? (
               <button type="button" aria-label="Cerrar sesión" title="Cerrar sesión" className="avatar" onClick={onLogout}>
                 {/* Real user identity intentionally left generic — no real auth backend in this MVP */}

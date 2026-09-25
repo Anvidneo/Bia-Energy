@@ -3,10 +3,12 @@ import './styles.css'
 import { Layout, type Screen } from './components/Layout'
 import { Dashboard } from './components/Dashboard'
 import { MeterDetail } from './components/MeterDetail'
+import { MetersTable } from './components/MetersTable'
 import { AnomaliesTable } from './components/AnomaliesTable'
 import { AnomalyDetail } from './components/AnomalyDetail'
 import { AnalysisRunner } from './components/AnalysisRunner'
 import { useTheme } from './hooks'
+import { extractMeterIdFromQuery } from './search'
 import type { Anomaly } from './types'
 
 // Simple state-based screen switching — no router library, per the plan's
@@ -34,17 +36,21 @@ function App() {
 
   const navigate = (s: Screen) => {
     setSelectedAnomaly(null)
+    // Landing on Medidores from the sidebar always starts at the table, even
+    // if a specific meter was open before — only goToMeter (search, "view
+    // meter" links) should jump straight to a meter's detail.
+    if (s === 'meters') setMeterId(null)
     setScreen(s)
   }
 
-  // Quick-fix search: the topbar box only understands meter IDs for now
+  // Quick search: the topbar box only understands meter ids for now
   // (e.g. "M-110", "110", "m-110") — it jumps straight to that meter's
   // detail view, reusing the same navigation goToMeter already does for
   // "view meter" links coming from an anomaly.
   const handleSearch = (query: string) => {
-    const digits = query.match(/\d+/)?.[0]
-    if (!digits) return
-    goToMeter(`M-${digits}`)
+    const meterId = extractMeterIdFromQuery(query)
+    if (!meterId) return
+    goToMeter(meterId)
   }
 
   return (
@@ -62,7 +68,11 @@ function App() {
       ) : (
         <>
           {screen === 'dashboard' && <Dashboard onSelectAnomaly={openAnomaly} />}
-          {screen === 'meters' && <MeterDetail initialMeterId={meterId} onSelectAnomaly={openAnomaly} />}
+          {screen === 'meters' && (
+            meterId
+              ? <MeterDetail key={meterId} meterId={meterId} onBack={() => setMeterId(null)} onSelectAnomaly={openAnomaly} />
+              : <MetersTable onSelectMeter={setMeterId} />
+          )}
           {screen === 'anomalies' && (
             <div className="card">
               <h3>Todas las anomalías</h3>

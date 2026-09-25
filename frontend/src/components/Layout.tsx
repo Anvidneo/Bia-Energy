@@ -28,11 +28,13 @@ interface Props {
   onNavigate: (s: Screen) => void
   theme: Theme
   onToggleTheme: () => void
+  onSearch?: (query: string) => void
   children: ReactNode
 }
 
-export function Layout({ screen, onNavigate, theme, onToggleTheme, children }: Props) {
+export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, children }: Props) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
 
   const navButtons = (variant: 'rail' | 'panel') =>
     NAV_ITEMS.map(({ screen: s, label, icon: Icon }) => (
@@ -111,10 +113,23 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, children }: P
 
         <header className="topbar">
           <h1>{TITLES[screen]}</h1>
-          <form role="search" className="search-form" onSubmit={(e) => e.preventDefault()}>
+          <form
+            role="search"
+            className="search-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              onSearch?.(searchValue)
+            }}
+          >
             <IconSearch />
             <label htmlFor="search-desktop" className="sr-only">Buscar</label>
-            <input id="search-desktop" type="text" placeholder="Buscar medidor, anomalía..." />
+            <input
+              id="search-desktop"
+              type="text"
+              placeholder="Buscar medidor, anomalía..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+            />
           </form>
           <div className="topbar-actions">
             <div role="group" aria-label="Cambiar tema" className="theme-toggle">

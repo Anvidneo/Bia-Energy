@@ -37,8 +37,18 @@ function App() {
     setScreen(s)
   }
 
+  // Quick-fix search: the topbar box only understands meter IDs for now
+  // (e.g. "M-110", "110", "m-110") — it jumps straight to that meter's
+  // detail view, reusing the same navigation goToMeter already does for
+  // "view meter" links coming from an anomaly.
+  const handleSearch = (query: string) => {
+    const digits = query.match(/\d+/)?.[0]
+    if (!digits) return
+    goToMeter(`M-${digits}`)
+  }
+
   return (
-    <Layout screen={screen} onNavigate={navigate} theme={theme} onToggleTheme={toggleTheme}>
+    <Layout screen={screen} onNavigate={navigate} theme={theme} onToggleTheme={toggleTheme} onSearch={handleSearch}>
       {selectedAnomaly ? (
         <AnomalyDetail
           anomalyId={selectedAnomaly.id}

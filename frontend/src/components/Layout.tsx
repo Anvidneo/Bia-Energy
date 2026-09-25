@@ -57,7 +57,9 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onL
   return (
     <div className="app-shell">
       <nav aria-label="Navegación principal" className="sidebar">
-        <div className="brand-mark" aria-hidden="true"><IconBolt /></div>
+        <button type="button" className="brand-mark" aria-label="Ir al dashboard" onClick={() => onNavigate('dashboard')}>
+          <IconBolt />
+        </button>
         <div style={{ height: 8, flex: '0 0 auto' }} />
         {navButtons('rail')}
       </nav>
@@ -76,7 +78,17 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onL
           />
           <div className="mobile-nav-panel">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div className="brand-mark" aria-hidden="true"><IconBolt /></div>
+              <button
+                type="button"
+                className="brand-mark"
+                aria-label="Ir al dashboard"
+                onClick={() => {
+                  onNavigate('dashboard')
+                  setMobileNavOpen(false)
+                }}
+              >
+                <IconBolt />
+              </button>
               <button className="mobile-icon-btn" aria-label="Cerrar menú" onClick={() => setMobileNavOpen(false)}>
                 <IconClose />
               </button>
@@ -92,8 +104,10 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onL
             <button aria-label="Abrir menú" className="mobile-icon-btn" onClick={() => setMobileNavOpen(true)}>
               <IconMenu />
             </button>
-            <div className="brand-mark" aria-hidden="true" style={{ width: 32, height: 32 }}><IconBolt size={14} /></div>
-            <span className="brand-name">Bia Energy</span>
+            <button type="button" className="brand-link" aria-label="Ir al dashboard" onClick={() => onNavigate('dashboard')}>
+              <div className="brand-mark" aria-hidden="true" style={{ width: 32, height: 32 }}><IconBolt size={14} /></div>
+              <span className="brand-name">Bia Energy</span>
+            </button>
           </div>
           <div className="actions">
             <button

@@ -61,6 +61,18 @@ describe('Layout', () => {
     expect(screen.queryByLabelText('Cerrar menú')).toBeNull()
   })
 
+  it('closes the mobile nav panel via its own close (X) button', () => {
+    setup()
+    fireEvent.click(screen.getByLabelText('Abrir menú'))
+    const closeButtons = screen.getAllByLabelText('Cerrar menú')
+    expect(closeButtons.length).toBeGreaterThan(1)
+
+    // closeButtons[0] is the backdrop overlay; the panel's own X button is
+    // the other one — click it specifically to cover that handler too.
+    fireEvent.click(closeButtons[1])
+    expect(screen.queryByLabelText('Cerrar menú')).toBeNull()
+  })
+
   it('calls onToggleTheme from the desktop theme switch', () => {
     const { onToggleTheme } = setup({ theme: 'light' })
     fireEvent.click(screen.getByLabelText('Tema oscuro'))
@@ -112,5 +124,31 @@ describe('Layout', () => {
     expect(avatar.tagName).toBe('BUTTON')
     fireEvent.click(avatar)
     expect(onLogout).toHaveBeenCalledTimes(1)
+  })
+
+  it('navigates to the dashboard when the sidebar logo is clicked', () => {
+    const { onNavigate } = setup({ screen: 'anomalies' })
+    const logos = screen.getAllByLabelText('Ir al dashboard')
+    fireEvent.click(logos[0])
+    expect(onNavigate).toHaveBeenCalledWith('dashboard')
+  })
+
+  it('navigates to the dashboard when the mobile header logo is clicked', () => {
+    const { onNavigate } = setup({ screen: 'anomalies' })
+    const logos = screen.getAllByLabelText('Ir al dashboard')
+    fireEvent.click(logos[logos.length - 1])
+    expect(onNavigate).toHaveBeenCalledWith('dashboard')
+  })
+
+  it('navigates to the dashboard and closes the mobile nav panel when its logo is clicked', () => {
+    const { onNavigate } = setup({ screen: 'anomalies' })
+    fireEvent.click(screen.getByLabelText('Abrir menú'))
+
+    const logos = screen.getAllByLabelText('Ir al dashboard')
+    expect(logos).toHaveLength(3)
+    fireEvent.click(logos[1])
+
+    expect(onNavigate).toHaveBeenCalledWith('dashboard')
+    expect(screen.queryByLabelText('Cerrar menú')).toBeNull()
   })
 })

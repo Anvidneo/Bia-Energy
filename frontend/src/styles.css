@@ -92,12 +92,27 @@ input { font-family: inherit; }
 .brand-mark {
   width: 40px;
   height: 40px;
+  border: none;
+  padding: 0;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+}
+
+/* Wraps the mobile header's logo + "Bia Energy" text as one clickable
+   "go to dashboard" control, matching .brand-group's own layout. */
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
 }
 
 .nav-btn {

@@ -18,6 +18,17 @@ var schemaSQL string
 
 var missingDBPattern = regexp.MustCompile(`database "([^"]+)" does not exist`)
 
+// validPostgresIdentifier matches a plain, unquoted-safe Postgres
+// identifier: it must start with a letter or underscore and contain only
+// letters, digits, and underscores. dbName always comes from Postgres'
+// own error message (see missingDatabaseName), which can only name a
+// database that exists on the server and therefore was itself created
+// under these same rules — but createDatabaseIfPossible re-validates it
+// here anyway before formatting it into SQL, rather than relying solely
+// on pq.QuoteIdentifier, since CREATE DATABASE's target can't be a bind
+// parameter in any Postgres driver (identifiers aren't parameterizable).
+var validPostgresIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
 // Connect opens a Postgres connection pool and verifies it with a ping.
 //
 // If the target database named in dsn doesn't exist yet, Connect creates
@@ -67,6 +78,10 @@ func missingDatabaseName(err error) (string, bool) {
 // createDatabaseIfPossible connects to the "postgres" maintenance database
 // on the same server as dsn and issues CREATE DATABASE for dbName.
 func createDatabaseIfPossible(dsn, dbName string) error {
+	if !validPostgresIdentifier.MatchString(dbName) {
+		return fmt.Errorf("refusing to auto-create database with unexpected name %q", dbName)
+	}
+
 	u, err := url.Parse(dsn)
 	if err != nil {
 		return fmt.Errorf("dsn is not a URL, cannot auto-create: %w", err)
@@ -78,6 +93,8 @@ func createDatabaseIfPossible(dsn, dbName string) error {
 	}
 	defer func() { _ = admin.Close() }()
 
+	// dbName is validated above and pq.QuoteIdentifier double-quotes it,
+	// so this can't be used to inject arbitrary SQL.
 	if _, err := admin.Exec(fmt.Sprintf("CREATE DATABASE %s", pq.QuoteIdentifier(dbName))); err != nil {
 		return fmt.Errorf("creating database %s: %w", dbName, err)
 	}

@@ -21,6 +21,13 @@ export function typeLabel(type: AnomalyType): string {
   }
 }
 
+// Single source of truth for "Normal vs. this anomaly's pill" so the
+// Medidores table and the meter detail card never drift apart.
+export function meterStatusBadge(meta: Pick<Anomaly, 'type' | 'severity'> | null): { className: string; label: string } {
+  if (!meta) return { className: 'pill pill-good', label: 'Normal' }
+  return { className: pillClass(meta), label: typeLabel(meta.type) }
+}
+
 export function severityLabel(s: Severity): string {
   switch (s) {
     case 'HIGH': return 'Alta'

@@ -98,4 +98,19 @@ describe('Layout', () => {
     const input = screen.getByPlaceholderText('Buscar medidor, anomalía...')
     expect(() => fireEvent.submit(input.closest('form') as HTMLFormElement)).not.toThrow()
   })
+
+  it('renders a plain, non-interactive account avatar when no onLogout is provided', () => {
+    setup()
+    const avatar = screen.getByLabelText('Cuenta')
+    expect(avatar.tagName).toBe('DIV')
+  })
+
+  it('renders a clickable logout avatar and calls onLogout when provided', () => {
+    const onLogout = vi.fn()
+    setup({ onLogout })
+    const avatar = screen.getByLabelText('Cerrar sesión')
+    expect(avatar.tagName).toBe('BUTTON')
+    fireEvent.click(avatar)
+    expect(onLogout).toHaveBeenCalledTimes(1)
+  })
 })

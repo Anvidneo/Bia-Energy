@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 // App.tsx is pure wiring: which screen shows, which prop closures get built
@@ -8,7 +8,7 @@ import App from './App'
 // these tests exercise exactly that wiring, not the children's own behavior
 // (each of which has its own dedicated test file already).
 vi.mock('./components/Layout', () => ({
-  Layout: ({ screen, onNavigate, onSearch, children }: any) => (
+  Layout: ({ screen, onNavigate, onSearch, onLogout, children }: any) => (
     <div>
       <div data-testid="current-screen">{screen}</div>
       <button onClick={() => onNavigate('dashboard')}>nav-dashboard</button>
@@ -18,9 +18,14 @@ vi.mock('./components/Layout', () => ({
       <button onClick={() => onNavigate('reports')}>nav-reports</button>
       <button onClick={() => onSearch?.('110')}>trigger-search</button>
       <button onClick={() => onSearch?.('no digits here')}>trigger-search-invalid</button>
+      <button onClick={onLogout}>trigger-logout</button>
       {children}
     </div>
   ),
+}))
+
+vi.mock('./components/Login', () => ({
+  Login: ({ onLogin }: any) => <button onClick={onLogin}>login-submit</button>,
 }))
 
 vi.mock('./components/Dashboard', () => ({
@@ -69,6 +74,17 @@ vi.mock('./hooks', () => ({
 }))
 
 describe('App', () => {
+  // Every existing test below exercises the app once already "logged in" —
+  // login/logout have their own dedicated tests further down — so each one
+  // seeds sessionStorage first rather than clicking through the login mock.
+  beforeEach(() => {
+    sessionStorage.setItem('bia-auth', '1')
+  })
+
+  afterEach(() => {
+    sessionStorage.removeItem('bia-auth')
+  })
+
   it('starts on the dashboard', () => {
     render(<App />)
     expect(screen.getByText('dashboard-select-anomaly')).toBeTruthy()
@@ -146,5 +162,40 @@ describe('App', () => {
 
     fireEvent.click(screen.getByText('nav-reports'))
     expect(screen.getByText(/Próximamente/)).toBeTruthy()
+  })
+
+  it('logs out via the layout action, returning to the login screen', () => {
+    render(<App />)
+    expect(screen.getByText('dashboard-select-anomaly')).toBeTruthy()
+
+    fireEvent.click(screen.getByText('trigger-logout'))
+    expect(screen.getByText('login-submit')).toBeTruthy()
+    expect(screen.queryByText('dashboard-select-anomaly')).toBeNull()
+    expect(sessionStorage.getItem('bia-auth')).toBeNull()
+  })
+})
+
+describe('App — auth gate', () => {
+  beforeEach(() => {
+    sessionStorage.removeItem('bia-auth')
+  })
+
+  it('shows the login screen when there is no stored session', () => {
+    render(<App />)
+    expect(screen.getByText('login-submit')).toBeTruthy()
+    expect(screen.queryByText('dashboard-select-anomaly')).toBeNull()
+  })
+
+  it('shows the app and persists the session once logged in', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText('login-submit'))
+    expect(screen.getByText('dashboard-select-anomaly')).toBeTruthy()
+    expect(sessionStorage.getItem('bia-auth')).toBe('1')
+  })
+
+  it('skips the login screen when a session was already stored', () => {
+    sessionStorage.setItem('bia-auth', '1')
+    render(<App />)
+    expect(screen.getByText('dashboard-select-anomaly')).toBeTruthy()
   })
 })

@@ -3,7 +3,7 @@ import type { Anomaly, Meter } from '../types'
 import { listMeters, listAnomalies } from '../api'
 import { useMediaQuery, MOBILE_BREAKPOINT } from '../hooks'
 import { IconSearch } from '../icons'
-import { pillClass, typeLabel, formatTime } from './severity'
+import { meterStatusBadge, formatTime } from './severity'
 import {
   buildMeterRows, filterMeterRows, sortMeterRows,
   type MeterRow, type SortKey, type SortDirection, type StatusFilter,
@@ -27,11 +27,11 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 ]
 
 function MeterStatusPill({ row }: { row: MeterRow }) {
-  if (row.anomalyCount > 0 && row.lastType && row.lastSeverity) {
-    const meta = { type: row.lastType, severity: row.lastSeverity }
-    return <span className={pillClass(meta)}>{typeLabel(row.lastType)}</span>
-  }
-  return <span className="pill pill-good">Normal</span>
+  const meta = row.anomalyCount > 0 && row.lastType && row.lastSeverity
+    ? { type: row.lastType, severity: row.lastSeverity }
+    : null
+  const badge = meterStatusBadge(meta)
+  return <span className={badge.className}>{badge.label}</span>
 }
 
 export function MetersTable({ onSelectMeter }: Props) {

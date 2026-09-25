@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import './styles.css'
 import { Layout, type Screen } from './components/Layout'
+import { Login } from './components/Login'
 import { Dashboard } from './components/Dashboard'
 import { MeterDetail } from './components/MeterDetail'
 import { MetersTable } from './components/MetersTable'
@@ -14,12 +15,42 @@ import type { Anomaly } from './types'
 // Simple state-based screen switching — no router library, per the plan's
 // own decision (the dataset/app is small enough that back/forward and deep
 // links aren't worth a second new dependency alongside the Go backend).
+const AUTH_STORAGE_KEY = 'bia-auth'
+
+function readStoredAuth(): boolean {
+  try {
+    return sessionStorage.getItem(AUTH_STORAGE_KEY) === '1'
+  } catch {
+    // sessionStorage unavailable (e.g. private browsing) — just ask again
+    return false
+  }
+}
+
 function App() {
+  const [authenticated, setAuthenticated] = useState<boolean>(readStoredAuth)
   const [screen, setScreen] = useState<Screen>('dashboard')
   const [meterId, setMeterId] = useState<string | null>(null)
   const [selectedAnomaly, setSelectedAnomaly] = useState<Anomaly | null>(null)
   const [returnScreen, setReturnScreen] = useState<Screen>('dashboard')
   const [theme, toggleTheme] = useTheme()
+
+  const handleLogin = () => {
+    setAuthenticated(true)
+    try {
+      sessionStorage.setItem(AUTH_STORAGE_KEY, '1')
+    } catch {
+      // best-effort persistence only — session still stays logged in in memory
+    }
+  }
+
+  const handleLogout = () => {
+    setAuthenticated(false)
+    try {
+      sessionStorage.removeItem(AUTH_STORAGE_KEY)
+    } catch {
+      // ignore
+    }
+  }
 
   const openAnomaly = (a: Anomaly) => {
     setReturnScreen(screen)
@@ -53,8 +84,19 @@ function App() {
     goToMeter(meterId)
   }
 
+  if (!authenticated) {
+    return <Login onLogin={handleLogin} />
+  }
+
   return (
-    <Layout screen={screen} onNavigate={navigate} theme={theme} onToggleTheme={toggleTheme} onSearch={handleSearch}>
+    <Layout
+      screen={screen}
+      onNavigate={navigate}
+      theme={theme}
+      onToggleTheme={toggleTheme}
+      onSearch={handleSearch}
+      onLogout={handleLogout}
+    >
       {selectedAnomaly ? (
         <AnomalyDetail
           anomalyId={selectedAnomaly.id}

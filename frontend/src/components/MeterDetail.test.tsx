@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MeterDetail } from './MeterDetail'
 import { getMeterReadings, listAnomalies } from '../api'
@@ -90,5 +90,50 @@ describe('MeterDetail', () => {
     const card = await screen.findByText(/Consumo muy por encima del baseline/)
     fireEvent.click(card)
     expect(onSelectAnomaly).toHaveBeenCalled()
+  })
+
+  it('calls onSelectAnomaly when the "Ver detalle" link inside a card is clicked', async () => {
+    const onSelectAnomaly = vi.fn()
+    render(<MeterDetail meterId="M-109" onBack={() => {}} onSelectAnomaly={onSelectAnomaly} />)
+    const link = await screen.findByText('Ver detalle')
+    fireEvent.click(link)
+    expect(onSelectAnomaly).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the summary card (estado, consumo, baseline, variación, eléctricas) from the worst anomaly', async () => {
+    render(<MeterDetail meterId="M-109" onBack={() => {}} onSelectAnomaly={() => {}} />)
+    await screen.findByText(/Consumo horario/)
+
+    const summary = screen.getByText('Resumen — M-109').closest('.card') as HTMLElement
+    expect(within(summary).getByText('Anomalía real')).toBeTruthy()
+    expect(within(summary).getByText('10.00 kWh')).toBeTruthy() // consumo actual
+    expect(within(summary).getByText('100.00 kWh')).toBeTruthy() // baseline (de la evidencia)
+    expect(within(summary).getByText('-90.0%')).toBeTruthy() // variación
+    expect(within(summary).getByText('220.0 V')).toBeTruthy()
+    expect(within(summary).getByText('5.00 A')).toBeTruthy()
+    expect(within(summary).getByText('0.95')).toBeTruthy()
+  })
+
+  it('shows Estado "Normal" and falls back to the median as baseline when there are no anomalies', async () => {
+    vi.mocked(listAnomalies).mockResolvedValue([])
+    render(<MeterDetail meterId="M-109" onBack={() => {}} onSelectAnomaly={() => {}} />)
+    await screen.findByText(/Sin anomalías detectadas/)
+
+    const summary = screen.getByText('Resumen — M-109').closest('.card') as HTMLElement
+    expect(within(summary).getByText('Normal')).toBeTruthy()
+    expect(within(summary).getAllByText('10.00 kWh')).toHaveLength(2) // consumo actual === baseline (mediana)
+    expect(within(summary).getByText('0.0%')).toBeTruthy()
+  })
+
+  it('shows placeholder dashes in the summary when there are no readings and no anomalies', async () => {
+    vi.mocked(getMeterReadings).mockResolvedValue([])
+    vi.mocked(listAnomalies).mockResolvedValue([])
+    render(<MeterDetail meterId="M-109" onBack={() => {}} onSelectAnomaly={() => {}} />)
+    await screen.findByText(/Sin anomalías detectadas/)
+
+    const summary = screen.getByText('Resumen — M-109').closest('.card') as HTMLElement
+    expect(within(summary).getByText('Normal')).toBeTruthy()
+    // consumo actual, baseline, variación, voltaje, corriente, factor de potencia
+    expect(within(summary).getAllByText('—')).toHaveLength(6)
   })
 })

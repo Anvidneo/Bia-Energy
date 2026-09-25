@@ -19,7 +19,7 @@ const SEVERITY_RANK: Record<Severity, number> = { LOW: 1, MEDIUM: 2, HIGH: 3 }
 
 // Which of two anomalies for the same meter should represent it in the
 // table: the more severe one wins, ties go to whichever fired more recently.
-function isWorseAnomaly(a: Anomaly, b: Anomaly): boolean {
+export function isWorseAnomaly(a: Anomaly, b: Anomaly): boolean {
   const rankA = SEVERITY_RANK[a.severity]
   const rankB = SEVERITY_RANK[b.severity]
   if (rankA !== rankB) return rankA > rankB

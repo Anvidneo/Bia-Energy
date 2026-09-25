@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Anomaly } from '../types'
 import {
   pillClass, typeLabel, severityLabel, dotColorVar, tintColorVar,
-  formatTime, formatRelative,
+  formatTime, formatRelative, meterStatusBadge,
 } from './severity'
 
 type Classifiable = Pick<Anomaly, 'type' | 'severity'>
@@ -96,5 +96,17 @@ describe('formatRelative', () => {
   it('reports days for a timestamp a day or more ago', () => {
     const iso = new Date(Date.now() - 2 * 86_400_000).toISOString()
     expect(formatRelative(iso)).toBe('Hace 2 d')
+  })
+})
+
+describe('meterStatusBadge', () => {
+  it('returns the good/Normal badge when there is no anomaly', () => {
+    expect(meterStatusBadge(null)).toEqual({ className: 'pill pill-good', label: 'Normal' })
+  })
+  it('delegates to pillClass/typeLabel for a real anomaly', () => {
+    expect(meterStatusBadge(REAL_HIGH)).toEqual({ className: 'pill pill-crit', label: 'Anomalía real' })
+  })
+  it('delegates to pillClass/typeLabel for a false positive', () => {
+    expect(meterStatusBadge(FALSE_POSITIVE)).toEqual({ className: 'pill pill-good', label: 'Falso positivo' })
   })
 })

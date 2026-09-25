@@ -29,10 +29,11 @@ interface Props {
   theme: Theme
   onToggleTheme: () => void
   onSearch?: (query: string) => void
+  onLogout?: () => void
   children: ReactNode
 }
 
-export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, children }: Props) {
+export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, onLogout, children }: Props) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchValue, setSearchValue] = useState('')
 
@@ -144,10 +145,16 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, onSearch, chi
               <IconBell />
               <span aria-hidden="true" className="badge-dot" />
             </button>
-            <div aria-label="Cuenta" className="avatar">
-              {/* Real user identity intentionally left generic — no auth in this MVP */}
-              BE
-            </div>
+            {onLogout ? (
+              <button type="button" aria-label="Cerrar sesión" title="Cerrar sesión" className="avatar" onClick={onLogout}>
+                {/* Real user identity intentionally left generic — no real auth backend in this MVP */}
+                BE
+              </button>
+            ) : (
+              <div aria-label="Cuenta" className="avatar">
+                BE
+              </div>
+            )}
           </div>
         </header>
 

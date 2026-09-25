@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import type { Anomaly, Reading } from '../types'
 import { getMeterReadings, listAnomalies } from '../api'
 import { ConsumptionChart } from './ConsumptionChart'
-import { pillClass, typeLabel, formatTime } from './severity'
+import { pillClass, typeLabel, formatTime, meterStatusBadge } from './severity'
+import { computeMeterStats } from './meterStats'
 
 interface Props {
   meterId: string
@@ -10,14 +11,24 @@ interface Props {
   onSelectAnomaly: (a: Anomaly) => void
 }
 
+function formatKwh(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(2)} kWh`
+}
+
+function formatPct(value: number | null): string {
+  if (value === null) return '—'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}
+
+// Keyed by meterId in the parent (see App.tsx), so this remounts — and
+// readings/anomalies/error reset to their initial values — every time the
+// selected meter changes, instead of resetting state imperatively here.
 export function MeterDetail({ meterId, onBack, onSelectAnomaly }: Props) {
   const [readings, setReadings] = useState<Reading[] | null>(null)
   const [anomalies, setAnomalies] = useState<Anomaly[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Keyed by meterId in the parent (see App.tsx), so this remounts — and
-  // readings/anomalies/error reset to their initial values — every time the
-  // selected meter changes, instead of resetting state imperatively here.
   useEffect(() => {
     let cancelled = false
     Promise.all([getMeterReadings(meterId), listAnomalies()])
@@ -31,6 +42,13 @@ export function MeterDetail({ meterId, onBack, onSelectAnomaly }: Props) {
   }, [meterId])
 
   const anomalyTimestamps = new Set((anomalies ?? []).map((a) => a.detected_at))
+  // Section 7 de la prueba: "Debe mostrar consumo actual, baseline,
+  // variación, estado e histórico. Idealmente también voltaje, corriente y
+  // factor de potencia." — el histórico es la gráfica de abajo; este
+  // resumen cubre el resto a partir de la última lectura + la peor
+  // anomalía activa del medidor.
+  const stats = readings && anomalies ? computeMeterStats(readings, anomalies) : null
+  const statusBadge = meterStatusBadge(stats?.worstAnomaly ?? null)
 
   return (
     <>
@@ -40,6 +58,44 @@ export function MeterDetail({ meterId, onBack, onSelectAnomaly }: Props) {
 
       {!error && (
         <>
+          <div className="card">
+            <h3>Resumen — {meterId}</h3>
+            {stats ? (
+              <div className="evidence-grid">
+                <div className="evidence-item">
+                  <span className="label">Estado</span>
+                  <span className={statusBadge.className}>{statusBadge.label}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Consumo actual</span>
+                  <span className="value">{formatKwh(stats.currentConsumptionKwh)}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Baseline aproximado</span>
+                  <span className="value">{formatKwh(stats.baselineKwh)}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Variación</span>
+                  <span className="value">{formatPct(stats.variationPct)}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Voltaje</span>
+                  <span className="value">{stats.voltageV !== null ? `${stats.voltageV.toFixed(1)} V` : '—'}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Corriente</span>
+                  <span className="value">{stats.currentA !== null ? `${stats.currentA.toFixed(2)} A` : '—'}</span>
+                </div>
+                <div className="evidence-item">
+                  <span className="label">Factor de potencia</span>
+                  <span className="value">{stats.powerFactor !== null ? stats.powerFactor.toFixed(2) : '—'}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="empty-state">Cargando resumen…</p>
+            )}
+          </div>
+
           <div className="card">
             <h3>Consumo horario — {meterId}</h3>
             {readings ? (
@@ -67,7 +123,7 @@ export function MeterDetail({ meterId, onBack, onSelectAnomaly }: Props) {
                     <span className="type-line">{a.reason}</span>
                     <div className="row-bottom">
                       <span className="meta">Confianza {Math.round(a.confidence * 100)}%</span>
-                      <a href="#" onClick={(e) => { e.preventDefault(); onSelectAnomaly(a) }}>Ver detalle</a>
+                      <a href="#" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onSelectAnomaly(a) }}>Ver detalle</a>
                     </div>
                   </div>
                 ))}

@@ -32,7 +32,7 @@ func loadReadings(db *sql.DB, path string) error {
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	readings, err := ParseReadings(f)
 	if err != nil {
@@ -43,7 +43,7 @@ func loadReadings(db *sql.DB, path string) error {
 	if err != nil {
 		return fmt.Errorf("beginning tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	meters := make(map[string]bool)
 	for _, r := range readings {
@@ -77,7 +77,7 @@ func loadEvents(db *sql.DB, path string) error {
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	events, err := ParseEvents(f)
 	if err != nil {
@@ -88,7 +88,7 @@ func loadEvents(db *sql.DB, path string) error {
 	if err != nil {
 		return fmt.Errorf("beginning tx: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	for _, e := range events {
 		if _, err := tx.Exec(`INSERT INTO meters (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`, e.MeterID); err != nil {

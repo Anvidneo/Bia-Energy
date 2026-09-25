@@ -45,7 +45,7 @@ func (d *Deps) handleListAnomalies(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	anomalies := []models.Anomaly{}
 	for rows.Next() {

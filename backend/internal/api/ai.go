@@ -129,7 +129,7 @@ func (d *Deps) loadReadingsAndEvents(ctx context.Context) ([]models.Reading, []m
 	if err != nil {
 		return nil, nil, err
 	}
-	defer readingRows.Close()
+	defer func() { _ = readingRows.Close() }()
 
 	var readings []models.Reading
 	for readingRows.Next() {
@@ -144,7 +144,7 @@ func (d *Deps) loadReadingsAndEvents(ctx context.Context) ([]models.Reading, []m
 	if err != nil {
 		return nil, nil, err
 	}
-	defer eventRows.Close()
+	defer func() { _ = eventRows.Close() }()
 
 	var events []models.Event
 	for eventRows.Next() {
@@ -173,7 +173,7 @@ func (d *Deps) persistAnomalies(ctx context.Context, analysisID string, anomalie
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, `DELETE FROM anomalies`); err != nil {
 		return err

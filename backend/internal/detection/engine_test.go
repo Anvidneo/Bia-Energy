@@ -18,7 +18,7 @@ func loadRealDataset(t *testing.T) ([]models.Reading, []models.Event) {
 	if err != nil {
 		t.Fatalf("opening readings.csv: %v", err)
 	}
-	defer rf.Close()
+	defer func() { _ = rf.Close() }()
 	readings, err := seed.ParseReadings(rf)
 	if err != nil {
 		t.Fatalf("parsing readings.csv: %v", err)
@@ -28,7 +28,7 @@ func loadRealDataset(t *testing.T) ([]models.Reading, []models.Event) {
 	if err != nil {
 		t.Fatalf("opening events.csv: %v", err)
 	}
-	defer ef.Close()
+	defer func() { _ = ef.Close() }()
 	events, err := seed.ParseEvents(ef)
 	if err != nil {
 		t.Fatalf("parsing events.csv: %v", err)

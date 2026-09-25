@@ -21,7 +21,7 @@ func Connect(dsn string) (*sql.DB, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 	return db, nil

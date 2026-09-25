@@ -21,7 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("connecting to database: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if err := db.ApplySchema(conn); err != nil {
 		log.Fatalf("applying schema: %v", err)

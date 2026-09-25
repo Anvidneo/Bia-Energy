@@ -16,7 +16,7 @@ func (d *Deps) handleListMeters(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	meters := []models.Meter{}
 	for rows.Next() {
@@ -54,7 +54,7 @@ func (d *Deps) handleGetMeterReadings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	readings := []models.Reading{}
 	for rows.Next() {

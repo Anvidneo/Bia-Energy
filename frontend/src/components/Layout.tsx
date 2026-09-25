@@ -60,8 +60,18 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, children }: P
       </nav>
 
       {mobileNavOpen && (
-        <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}>
-          <div className="mobile-nav-panel" onClick={(e) => e.stopPropagation()}>
+        <>
+          {/* Native <button> instead of a clickable <div> so the backdrop is
+              keyboard/focus accessible without needing manual role/key handling.
+              It's a sibling of the panel (not a wrapper) so real <button> nav
+              items inside the panel are never nested inside this button. */}
+          <button
+            type="button"
+            className="mobile-nav-overlay"
+            aria-label="Cerrar menú"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          <div className="mobile-nav-panel">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div className="brand-mark" aria-hidden="true"><IconBolt /></div>
               <button className="mobile-icon-btn" aria-label="Cerrar menú" onClick={() => setMobileNavOpen(false)}>
@@ -70,7 +80,7 @@ export function Layout({ screen, onNavigate, theme, onToggleTheme, children }: P
             </div>
             {navButtons('panel')}
           </div>
-        </div>
+        </>
       )}
 
       <div className="main-column">

@@ -55,13 +55,13 @@ export function AnalysisRunner({ onSelectAnomaly }: Props) {
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h3>Ejecutar análisis de anomalías</h3>
+            <h3>Ejecutar análisis IA</h3>
             <p className="caption" style={{ marginTop: 4 }}>
               Corre el motor de detección determinístico sobre todas las lecturas y eventos cargados.
             </p>
           </div>
           <button className="btn btn-primary" onClick={start} disabled={isRunning}>
-            <IconPlay /> {isRunning ? 'Ejecutando…' : 'Ejecutar análisis'}
+            <IconPlay /> {isRunning ? 'Ejecutando…' : 'Ejecutar análisis IA'}
           </button>
         </div>
 

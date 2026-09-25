@@ -5,7 +5,17 @@ import type { Meter, Reading, Anomaly, AnalysisResult, DashboardSummary } from '
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
+// Every call site below passes a literal path or one built from
+// encodeURIComponent(...), so this can never actually fail — it's a
+// guard against a future call site smuggling a full URL (e.g.
+// "https://evil.example") through a dynamic segment and redirecting the
+// request away from our own API host.
+const SAFE_PATH = /^\/[A-Za-z0-9\-._~/]*$/
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!SAFE_PATH.test(path)) {
+    throw new Error(`refusing to fetch unsafe path: ${path}`)
+  }
   const res = await fetch(`${BASE_URL}${path}`, init)
   if (!res.ok) {
     let detail = res.statusText
@@ -53,5 +63,5 @@ export function listAnomalies() {
 }
 
 export function getAnomaly(id: number | string) {
-  return request<Anomaly>(`/anomalies/${id}`)
+  return request<Anomaly>(`/anomalies/${encodeURIComponent(id)}`)
 }

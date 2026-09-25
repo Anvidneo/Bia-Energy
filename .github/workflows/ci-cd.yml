@@ -195,7 +195,16 @@ jobs:
         run: npm install --global vercel@latest
       - name: Pull Vercel project settings
         run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+      # `vercel build` installs dependencies itself, and NODE_ENV=production
+      # (set by Vercel's build environment) makes npm skip devDependencies —
+      # which is where vite, typescript, @types/node, etc. live, breaking
+      # the type-check step. A vercel.json installCommand override does NOT
+      # fix this: the project's dashboard Project Settings take precedence
+      # over vercel.json for install/build commands, so the only reliable
+      # fix from the CLI side is to force npm's install scope directly.
       - name: Build project artifacts
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
         run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
       - name: Deploy prebuilt output
         run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

@@ -11,18 +11,19 @@ interface Props {
 }
 
 export function AnomaliesTable({ onSelect, limit, anomalies: provided }: Props) {
-  const [anomalies, setAnomalies] = useState<Anomaly[] | null>(provided ?? null)
+  // When the caller already has the list (Dashboard, AnalysisRunner), use it
+  // directly during render instead of mirroring it into state via an effect
+  // (that pattern just triggers an extra, unnecessary render).
+  const [fetched, setFetched] = useState<Anomaly[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT)
+  const anomalies = provided ?? fetched
 
   useEffect(() => {
-    if (provided) {
-      setAnomalies(provided)
-      return
-    }
+    if (provided) return
     let cancelled = false
     listAnomalies()
-      .then((data) => { if (!cancelled) setAnomalies(data) })
+      .then((data) => { if (!cancelled) setFetched(data) })
       .catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
   }, [provided])

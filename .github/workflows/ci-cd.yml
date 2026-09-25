@@ -130,9 +130,45 @@ jobs:
     needs: [test-backend, test-frontend, sonarcloud]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    env:
+      # bia-energy-backend — not a secret, just this job's target service.
+      RENDER_SERVICE_ID: srv-daqt7060tbcc738683vg
     steps:
-      - name: Trigger Render deploy hook
-        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      # The deploy hook only *starts* a deploy and returns immediately, so a
+      # bare curl here would make this job go green the instant Render
+      # accepts the request — regardless of whether the build/deploy that
+      # follows actually succeeds. Vercel's CLI (deploy-frontend) waits
+      # synchronously and reports real failures; this step polls Render's
+      # API so a broken backend deploy fails the job the same way.
+      - name: Trigger Render deploy
+        id: trigger
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          DEPLOY_ID=$(echo "$RESPONSE" | jq -r '.deploy.id')
+          echo "deploy_id=$DEPLOY_ID" >> "$GITHUB_OUTPUT"
+          echo "Triggered deploy $DEPLOY_ID"
+
+      - name: Wait for the Render deploy to finish
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -euo pipefail
+          DEPLOY_ID="${{ steps.trigger.outputs.deploy_id }}"
+          for _ in $(seq 1 60); do
+            STATUS=$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$DEPLOY_ID" | jq -r '.status')
+            echo "Status: $STATUS"
+            case "$STATUS" in
+              live) exit 0 ;;
+              build_failed|update_failed|canceled|deactivated)
+                echo "Render deploy failed with status: $STATUS"
+                exit 1 ;;
+            esac
+            sleep 10
+          done
+          echo "Timed out waiting for the Render deploy to finish"
+          exit 1
 
   deploy-frontend:
     name: Deploy frontend (Vercel)

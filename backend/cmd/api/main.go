@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	"bia-energy/backend/internal/api"
 	"bia-energy/backend/internal/config"
 	"bia-energy/backend/internal/db"
+	"bia-energy/backend/internal/firebase"
 	"bia-energy/backend/internal/seed"
 )
 
@@ -33,13 +35,33 @@ func main() {
 
 	var explainer ai.Explainer = ai.RuleExplainer{}
 	if cfg.UseLLMExplainer {
-		// Sunday stretch goal: swap in ai.LLMExplainer here once it
-		// exists. Falling back to RuleExplainer keeps the service
-		// working even if USE_LLM_EXPLAINER is set before that lands.
-		log.Println("USE_LLM_EXPLAINER=true but LLMExplainer isn't built yet; using RuleExplainer")
+		if cfg.LLMAPIKey == "" {
+			log.Println("USE_LLM_EXPLAINER=true but LLM_API_KEY is empty; using RuleExplainer")
+		} else {
+			explainer = ai.NewLLMExplainer(cfg.LLMAPIKey, cfg.LLMModel)
+			log.Printf("using ai.LLMExplainer (model=%s)", cfg.LLMModel)
+		}
 	}
 
 	deps := &api.Deps{DB: conn, Explainer: explainer}
+
+	if cfg.UseFirebaseAlerts {
+		if cfg.FirebaseProjectID == "" || cfg.FirebaseCredentialsJSON == "" {
+			log.Println("USE_FIREBASE_ALERTS=true but FIREBASE_PROJECT_ID/FIREBASE_CREDENTIALS_JSON are incomplete; alerts disabled")
+		} else {
+			publisher, err := firebase.NewPublisher(context.Background(), cfg.FirebaseProjectID, cfg.FirebaseCredentialsJSON)
+			if err != nil {
+				// Firebase must never block startup: log and run without
+				// alerts rather than failing the whole service.
+				log.Printf("firebase: could not initialize publisher, alerts disabled: %v", err)
+			} else {
+				defer func() { _ = publisher.Close() }()
+				deps.AlertPublisher = publisher
+				log.Println("critical alerts will be published to Firebase")
+			}
+		}
+	}
+
 	router := api.NewRouter(deps)
 
 	addr := ":" + cfg.Port

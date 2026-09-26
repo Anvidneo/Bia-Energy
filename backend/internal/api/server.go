@@ -20,6 +20,11 @@ type Deps struct {
 	DB        *sql.DB
 	Explainer ai.Explainer
 
+	// AlertPublisher is nil unless USE_FIREBASE_ALERTS is on (see
+	// cmd/api/main.go); publishCriticalAlerts in alerts.go treats a nil
+	// value as "alerts disabled" and is a no-op.
+	AlertPublisher CriticalAlertPublisher
+
 	mu       sync.Mutex
 	analyses map[string]*analysisState
 }

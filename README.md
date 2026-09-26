@@ -53,10 +53,15 @@ Ver [`.env.example`](.env.example). Las relevantes hoy:
 |---|---|---|
 | `PORT` | Puerto HTTP del backend | `8080` |
 | `DATABASE_URL` | DSN de Postgres | `postgres://bia:bia@localhost:5432/bia_energy?sslmode=disable` |
-| `USE_LLM_EXPLAINER` | Activa el explicador LLM (stretch goal, no implementado — cae a `RuleExplainer` si se pone en `true`) | `false` |
+| `USE_LLM_EXPLAINER` | Activa `ai.LLMExplainer` (Gemini) en vez de `RuleExplainer`; requiere `LLM_API_KEY` | `false` |
+| `LLM_API_KEY` | API key de Gemini (free tier, [Google AI Studio](https://aistudio.google.com/apikey)) | — |
+| `LLM_MODEL` | Modelo de Gemini a usar | `gemini-2.5-flash` |
+| `USE_FIREBASE_ALERTS` | Publica cada anomalía `HIGH` a Firestore vía `firebase.Publisher`; requiere `FIREBASE_PROJECT_ID`/`FIREBASE_CREDENTIALS_JSON` | `false` |
+| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase | — |
+| `FIREBASE_CREDENTIALS_JSON` | Contenido completo (una sola línea) del JSON de una service account con permiso de escritura en Firestore | — |
 | `VITE_API_URL` | URL del backend que consume el frontend | `http://localhost:8080` |
 
-`LLM_API_KEY` y `FIREBASE_PROJECT_ID`/`FIREBASE_CREDENTIALS_JSON` están comentadas en `.env.example`: son para dos stretch goals documentados pero nunca construidos (ver "Alcance" abajo).
+Ambos flags están apagados por defecto y son aditivos: si están en `true` pero faltan sus credenciales, el backend loguea una advertencia al arrancar y sigue funcionando sin ellos (`RuleExplainer` / sin alertas) en vez de fallar. Las credenciales reales nunca se commitean — van solo en `.env` local y en las variables de entorno de Render.
 
 ## CI/CD
 
@@ -82,7 +87,7 @@ Login → Dashboard → Medidor M-109 → Ejecutar análisis IA → ver la anoma
 
 Construido y funcional: los 9 endpoints, el motor de detección completo, el explicador basado en reglas, el frontend completo (login, dashboard con KPIs y gráfica de serie temporal, tabla de medidores, detalle de medidor con resumen eléctrico, tabla y detalle de anomalías, ejecución de análisis con pipeline visual), CI/CD con deploy automático a Render (backend) y Vercel (frontend), y cobertura de tests real en ambos lados (no solo del código nuevo).
 
-Dejado como stretch goal explícito, sin implementar (documentado en el propio código, no son bugs): un explicador basado en LLM (`internal/ai`, gateado por `USE_LLM_EXPLAINER`) y una integración de alertas a Firebase (`internal/firebase`, package vacío salvo su doc comment). Ninguno de los dos es requerido por el enunciado.
+Construido como extensión opcional, apagada por defecto (ninguna es requerida por el enunciado): `ai.LLMExplainer` (`internal/ai/llm_explainer.go` + `gemini_client.go`, gateado por `USE_LLM_EXPLAINER`) rephrasea el `Reason`/`RecommendedAction` del explicador de reglas vía Gemini sin nunca reclasificar ni inventar cifras — cualquier falla (red, timeout, respuesta no parseable) cae de vuelta a `RuleExplainer` para esa anomalía puntual; y `firebase.Publisher` (`internal/firebase`, gateado por `USE_FIREBASE_ALERTS`) publica cada anomalía `HIGH` a la colección `critical_alerts` de Firestore justo después de que `persistAnomalies` confirma en la base de datos — cualquier error de Firebase se loguea y se descarta, nunca interrumpe el pipeline. Ambos usan el SDK/API oficiales, no lógica de auth hecha a mano.
 
 ## Testing
 

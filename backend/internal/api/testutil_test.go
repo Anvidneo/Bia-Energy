@@ -15,6 +15,7 @@ import (
 
 	"bia-energy/backend/internal/ai"
 	"bia-energy/backend/internal/db"
+	"bia-energy/backend/internal/models"
 )
 
 // testDBURL is set up once by TestMain, in a throwaway database dedicated
@@ -102,6 +103,30 @@ func doRequest(router http.Handler, method, path string) *httptest.ResponseRecor
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	return rec
+}
+
+// waitForAnalysis polls GET /ai/analysis/:id until it reaches a terminal
+// status (done or error) or a 5s deadline passes, returning the final
+// result. Shared by tests that need a completed analysis run rather than
+// just the 202 from POST /ai/analyze.
+func waitForAnalysis(t *testing.T, router http.Handler, analysisID string) models.AnalysisResult {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	var result models.AnalysisResult
+	for {
+		rec := doRequest(router, http.MethodGet, "/ai/analysis/"+analysisID)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET /ai/analysis/%s status = %d, want 200", analysisID, rec.Code)
+		}
+		result = decodeJSON[models.AnalysisResult](t, rec)
+		if result.Status == models.AnalysisDone || result.Status == models.AnalysisError {
+			return result
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("analysis %s did not finish within 5s (last status: %s)", analysisID, result.Status)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 func decodeJSON[T any](t *testing.T, rec *httptest.ResponseRecorder) T {

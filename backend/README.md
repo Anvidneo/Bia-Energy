@@ -6,14 +6,14 @@ Go 1.24 + [chi](https://github.com/go-chi/chi) + Postgres. Motor de detección d
 
 ```
 cmd/api/            entrypoint: config → conexión DB → schema → seed → router
-internal/config/    lee variables de entorno (PORT, DATABASE_URL, USE_LLM_EXPLAINER)
+internal/config/    lee variables de entorno (PORT, DATABASE_URL, USE_LLM_EXPLAINER, USE_FIREBASE_ALERTS, ...)
 internal/db/        conexión Postgres (con auto-creación de la DB si no existe) + schema.sql
 internal/seed/      parseo de readings.csv/events.csv e inserción idempotente
 internal/models/    contrato de datos compartido (Meter, Reading, Event, Anomaly, ...)
 internal/detection/ motor de detección determinístico (baseline.go + engine.go)
-internal/ai/        capa de explicación (Reason + RecommendedAction a partir de la Evidence)
+internal/ai/        capa de explicación: RuleExplainer (default) y LLMExplainer (Gemini, opcional)
 internal/api/       handlers HTTP (chi) — un archivo por recurso
-internal/firebase/  stub sin implementar — stretch goal, ver "Alcance" en el README raíz
+internal/firebase/  Publisher: publica anomalías HIGH a Firestore (opcional, ver más abajo)
 data/                readings.csv, events.csv (dataset del enunciado)
 ```
 
@@ -77,7 +77,14 @@ Casos conocidos codificados en `internal/detection/engine_test.go::TestKnownCase
 
 ## Explicación (`internal/ai`)
 
-`Explainer` es una interfaz con una sola implementación real: `RuleExplainer`, que genera `Reason`/`RecommendedAction` con templates que citan las cifras de `Evidence` — determinístico, sin costo, sin latencia, reproducible en tests. El código deja el punto de extensión para un `LLMExplainer` (gateado por `USE_LLM_EXPLAINER`) pero ese explicador nunca se construyó: es un stretch goal explícito, no una funcionalidad rota.
+`Explainer` es una interfaz con dos implementaciones:
+
+- **`RuleExplainer`** (default): genera `Reason`/`RecommendedAction` con templates que citan las cifras de `Evidence` — determinístico, sin costo, sin latencia, 100% reproducible en tests.
+- **`LLMExplainer`** (`llm_explainer.go` + `gemini_client.go`, activado con `USE_LLM_EXPLAINER=true` + `LLM_API_KEY`): rephrasea el texto de `RuleExplainer` vía la API de Gemini (una sola llamada HTTP con `net/http`, sin SDK) para que suene más natural, citando siempre las mismas cifras — nunca reclasifica ni inventa números. El prompt le pide al modelo un JSON `{"reason", "recommended_action"}`; si la llamada falla, hace timeout (8s por defecto) o la respuesta no se puede parsear, cae de vuelta a `RuleExplainer` para esa anomalía puntual y loguea la causa — nunca tumba el pipeline de `POST /ai/analyze`. La interfaz `completer` (`(ctx, prompt) (string, error)`) permite inyectar un cliente falso en los tests sin red ni API key real.
+
+## Alertas críticas (`internal/firebase`)
+
+`firebase.Publisher` (activado con `USE_FIREBASE_ALERTS=true` + `FIREBASE_PROJECT_ID`/`FIREBASE_CREDENTIALS_JSON`) usa el SDK oficial (`firebase.google.com/go/v4` + `cloud.google.com/go/firestore`) para publicar, justo después de que `persistAnomalies` confirma en la base de datos, cada anomalía con `Severity == HIGH` como un documento en la colección `critical_alerts` (`meter_id`, `type`, `severity`, `confidence`, `reason`, `recommended_action`, `detected_at`, `analysis_id`), usando el id de la anomalía como id del documento para que re-correr un análisis sobrescriba en vez de duplicar. La interfaz `api.CriticalAlertPublisher` deja esto inyectable en tests con un publisher falso — así se prueba qué anomalías califican (solo `HIGH`) y que un error del publisher nunca se propaga hacia la respuesta HTTP, sin necesitar un proyecto de Firestore real en CI.
 
 ## Modelo de datos
 

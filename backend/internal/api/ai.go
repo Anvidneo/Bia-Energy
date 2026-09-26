@@ -104,6 +104,11 @@ func (d *Deps) runAnalysis(id string) {
 		return
 	}
 
+	// Fire critical alerts only after persistAnomalies has confirmed in
+	// the database (anomalies now carry their DB-assigned IDs, used as the
+	// Firestore document key). No-op unless USE_FIREBASE_ALERTS is on.
+	d.publishCriticalAlerts(ctx, id, anomalies)
+
 	finished := time.Now().UTC()
 	d.mu.Lock()
 	if st, ok := d.analyses[id]; ok {

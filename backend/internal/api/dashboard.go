@@ -7,6 +7,16 @@ import (
 	"bia-energy/backend/internal/models"
 )
 
+// handleDashboardSummary returns the aggregate KPIs the dashboard's top
+// row shows.
+//
+// @Summary      Resumen del dashboard
+// @Description  KPIs agregados: total de medidores, anomalías activas y fecha del último análisis.
+// @Tags         dashboard
+// @Produce      json
+// @Success      200  {object}  models.DashboardSummary
+// @Failure      500  {object}  ErrorResponse
+// @Router       /dashboard/summary [get]
 func (d *Deps) handleDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	var summary models.DashboardSummary
 

@@ -36,6 +36,16 @@ func scanAnomaly(row interface {
 	return a, nil
 }
 
+// handleListAnomalies lists every anomaly from the latest persisted
+// analysis run.
+//
+// @Summary      Listar anomalías
+// @Description  Anomalías de la última corrida de análisis persistida, más reciente primero.
+// @Tags         anomalies
+// @Produce      json
+// @Success      200  {array}   models.Anomaly
+// @Failure      500  {object}  ErrorResponse
+// @Router       /anomalies [get]
 func (d *Deps) handleListAnomalies(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.DB.QueryContext(r.Context(), `
 		SELECT id, meter_id, detected_at, type, severity, confidence,
@@ -59,6 +69,17 @@ func (d *Deps) handleListAnomalies(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, anomalies)
 }
 
+// handleGetAnomaly returns one anomaly by its database id.
+//
+// @Summary      Obtener una anomalía
+// @Description  Detalle completo de una anomalía, incluida su evidencia.
+// @Tags         anomalies
+// @Produce      json
+// @Param        id   path      integer  true  "id numérico de la anomalía"
+// @Success      200  {object}  models.Anomaly
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /anomalies/{id} [get]
 func (d *Deps) handleGetAnomaly(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	row := d.DB.QueryRowContext(r.Context(), `

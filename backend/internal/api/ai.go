@@ -32,6 +32,16 @@ var pipelineStages = []string{
 	"Lecturas", "Baseline", "Deteccion", "Correlacion", "Eventos", "Explicacion", "Recomendacion",
 }
 
+// handlePostAnalyze starts one analysis run (detection + explanation +
+// persistence, and Firebase alerts if enabled) in the background and
+// returns immediately with an id to poll.
+//
+// @Summary      Iniciar un análisis
+// @Description  Dispara el pipeline completo (lecturas → baseline → detección → correlación → eventos → explicación → recomendación) de forma asíncrona.
+// @Tags         ai
+// @Produce      json
+// @Success      202  {object}  AnalyzeAccepted
+// @Router       /ai/analyze [post]
 func (d *Deps) handlePostAnalyze(w http.ResponseWriter, r *http.Request) {
 	id := newAnalysisID()
 	now := time.Now().UTC()
@@ -50,6 +60,17 @@ func (d *Deps) handlePostAnalyze(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]string{"analysisId": id})
 }
 
+// handleGetAnalysis reports the current status/stage of an analysis run
+// started via POST /ai/analyze, for the frontend to poll.
+//
+// @Summary      Consultar un análisis
+// @Description  Estado (pending/processing/done/error) y etapa actual de una corrida de análisis; incluye las anomalías cuando status=done.
+// @Tags         ai
+// @Produce      json
+// @Param        id   path      string  true  "analysisId devuelto por POST /ai/analyze"
+// @Success      200  {object}  models.AnalysisResult
+// @Failure      404  {object}  ErrorResponse
+// @Router       /ai/analysis/{id} [get]
 func (d *Deps) handleGetAnalysis(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

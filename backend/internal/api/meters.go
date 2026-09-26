@@ -10,6 +10,15 @@ import (
 	"bia-energy/backend/internal/models"
 )
 
+// handleListMeters lists every meter known to the system.
+//
+// @Summary      Listar medidores
+// @Description  Todos los medidores presentes en el dataset cargado.
+// @Tags         meters
+// @Produce      json
+// @Success      200  {array}   models.Meter
+// @Failure      500  {object}  ErrorResponse
+// @Router       /meters [get]
 func (d *Deps) handleListMeters(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.DB.QueryContext(r.Context(), `SELECT id FROM meters ORDER BY id`)
 	if err != nil {
@@ -30,6 +39,17 @@ func (d *Deps) handleListMeters(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, meters)
 }
 
+// handleGetMeter returns one meter by id.
+//
+// @Summary      Obtener un medidor
+// @Description  Detalle de un medidor por su id.
+// @Tags         meters
+// @Produce      json
+// @Param        id   path      string  true  "Meter ID (ej. M-109)"
+// @Success      200  {object}  models.Meter
+// @Failure      404  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Router       /meters/{id} [get]
 func (d *Deps) handleGetMeter(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var m models.Meter
@@ -45,6 +65,18 @@ func (d *Deps) handleGetMeter(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, m)
 }
 
+// handleGetMeterReadings returns every reading recorded for one meter,
+// ordered by timestamp.
+//
+// @Summary      Lecturas de un medidor
+// @Description  Historial completo de lecturas horarias de un medidor, ordenado por fecha.
+// @Tags         meters
+// @Produce      json
+// @Param        id   path      string  true  "Meter ID (ej. M-109)"
+// @Success      200  {array}   models.Reading
+// @Failure      404  {object}  ErrorResponse  "el medidor no existe o no tiene lecturas"
+// @Failure      500  {object}  ErrorResponse
+// @Router       /meters/{id}/readings [get]
 func (d *Deps) handleGetMeterReadings(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	rows, err := d.DB.QueryContext(r.Context(),

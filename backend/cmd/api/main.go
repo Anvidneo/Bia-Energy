@@ -16,6 +16,15 @@ import (
 	"bia-energy/backend/internal/seed"
 )
 
+// @title        Bia Energy API
+// @version      1.0
+// @description  API REST de detección de anomalías de consumo eléctrico: ingesta de lecturas, motor de detección determinístico, explicación en lenguaje natural (reglas o LLM) y alertas críticas opcionales a Firebase.
+// @BasePath     /
+// @schemes      http https
+//
+// Generado por `swag init` (ver backend/README.md) a partir de las
+// anotaciones sobre cada handler en internal/api/*.go — nunca se edita a
+// mano el spec resultante.
 func main() {
 	cfg := config.Load()
 

@@ -59,6 +59,22 @@ Forma de una `Anomaly` (sección 10 del enunciado):
 }
 ```
 
+### Documentación interactiva (Swagger)
+
+Los 9 endpoints están documentados como anotaciones `@Summary`/`@Param`/`@Success`/... directamente sobre cada handler en `internal/api/*.go` (ver por ejemplo `handleGetMeter` en `meters.go`). [`swaggo/swag`](https://github.com/swaggo/swag) las lee y genera el spec OpenAPI — nunca se edita un YAML/JSON a mano, así que la documentación no se puede desincronizar del código sin que alguien lo note (basta con volver a generar).
+
+Para (re)generar el spec después de tocar cualquier anotación o agregar un endpoint:
+
+```bash
+go install github.com/swaggo/swag/cmd/swag@latest   # una sola vez
+cd backend
+swag init -g cmd/api/main.go                          # genera ./docs (swagger.json, swagger.yaml, docs.go)
+```
+
+`swag init` **debe correrse al menos una vez** antes de `go build`/`go test`: `cmd/api/main.go`... en realidad el import generado vive en `internal/api/server.go` (`_ "bia-energy/backend/docs"`), que no compila hasta que el paquete `docs/` exista. El directorio generado se versiona en el repo (no está en `.gitignore`) para que `go build` funcione sin depender de tener `swag` instalado en cada máquina/CI.
+
+Con el backend corriendo, la UI queda en `http://localhost:8080/swagger/index.html` (en producción, `https://<tu-servicio-en-render>/swagger/index.html`); el spec crudo está en `/swagger/doc.json`.
+
 ## Motor de detección
 
 `internal/detection` — 100% reglas + estadística robusta (mediana + MAD, nunca media/desvest, para no ser sensible a outliers), reproducible y cubierto por tests unitarios contra el dataset real. Umbrales calibrados para clasificar correctamente los 4 casos conocidos sin falsos positivos en los 8 medidores normales.

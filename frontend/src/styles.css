@@ -337,7 +337,12 @@ input { font-family: inherit; }
 }
 
 .kpi-card {
-  display: flex; align-items: center; gap: 12px;
+  /* align-items: flex-start (not center) on purpose: kpi-value can wrap to
+     two lines for a long number (e.g. "155250.85 kWh"), and centering
+     against the ring would then land the ring right on the seam between
+     those two lines, covering part of the number. Pinning the ring to the
+     top keeps it clear of the value no matter how long it gets. */
+  display: flex; align-items: flex-start; gap: 12px;
   padding: 18px;
   border-radius: 16px;
   background: var(--surface);

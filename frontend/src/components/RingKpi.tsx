@@ -10,9 +10,14 @@ interface Props {
   percent: number // 0-100
   trackColor: string
   color: string
+  // Some KPIs (raw totals like "Consumo total") have no natural
+  // percent-of-something meaning — percent is only used to keep their ring
+  // visually full, never to claim a real number. Set this to false for
+  // those so the ring doesn't show a misleading "100%".
+  showPercentLabel?: boolean
 }
 
-export function RingKpi({ label, value, sub, percent, trackColor, color }: Props) {
+export function RingKpi({ label, value, sub, percent, trackColor, color, showPercentLabel = true }: Props) {
   const clamped = Math.max(0, Math.min(100, percent))
   const offset = CIRCUMFERENCE * (1 - clamped / 100)
 
@@ -32,9 +37,11 @@ export function RingKpi({ label, value, sub, percent, trackColor, color }: Props
           strokeDashoffset={offset}
           transform="rotate(-90 28 28)"
         />
-        <text x="28" y="32" textAnchor="middle" fontSize="12" fontWeight="700" fill={color}>
-          {Math.round(clamped)}%
-        </text>
+        {showPercentLabel && (
+          <text x="28" y="32" textAnchor="middle" fontSize="12" fontWeight="700" fill={color}>
+            {Math.round(clamped)}%
+          </text>
+        )}
       </svg>
     </div>
   )

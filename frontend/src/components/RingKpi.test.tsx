@@ -26,4 +26,13 @@ describe('RingKpi', () => {
     render(<RingKpi label="x" value={1} sub="y" percent={-20} trackColor="#eee" color="#333" />)
     expect(screen.getByText('0%')).toBeTruthy()
   })
+
+  it('hides the percent text when showPercentLabel is false, keeping the ring full', () => {
+    const { container } = render(
+      <RingKpi label="Consumo total" value="20.00 kWh" sub="Periodo completo" percent={100} showPercentLabel={false} trackColor="#eee" color="#333" />,
+    )
+    expect(screen.queryByText('100%')).toBeNull()
+    const progressCircle = container.querySelectorAll('circle')[1]
+    expect(progressCircle.getAttribute('stroke-dashoffset')).toBe('0')
+  })
 })

@@ -86,6 +86,7 @@ export function Dashboard({ onSelectAnomaly }: Props) {
           value={totalMeters}
           sub="Con datos cargados"
           percent={totalMeters > 0 ? 100 : 0}
+          showPercentLabel={false}
           trackColor="#DCEBFC"
           color="var(--accent)"
         />
@@ -94,6 +95,7 @@ export function Dashboard({ onSelectAnomaly }: Props) {
           value={formatKwh(totalConsumptionKwh)}
           sub="Periodo completo"
           percent={100}
+          showPercentLabel={false}
           trackColor="#DCEBFC"
           color="var(--accent)"
         />

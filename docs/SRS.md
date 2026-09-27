@@ -1,8 +1,8 @@
 # Especificación de Requisitos de Software (SRS)
 ## Bia Energy — Plataforma de Gestión Energética con Detección de Anomalías
 
-**Versión:** 1.0
-**Fecha:** 2026-09-26
+**Versión:** 1.1
+**Fecha:** 2026-09-27
 **Estándar de referencia:** IEEE 830-1998
 
 ---
@@ -167,7 +167,7 @@ Cada requisito funcional está identificado con un ID único, trazable a un endp
 - **RF-14**: El sistema debe generar, para cada anomalía, un `Reason` (explicación) y un `RecommendedAction` (acción recomendada) en español, citando las cifras de la evidencia (nunca inventando números).
 - **RF-15**: Por defecto, la explicación debe generarse mediante plantillas determinísticas (`RuleExplainer`), sin dependencia de servicios externos.
 - **RF-16**: Cuando `USE_LLM_EXPLAINER=true` y hay una `LLM_API_KEY` configurada, el sistema debe usar un explicador basado en LLM (`LLMExplainer`, Gemini) para reformular el texto de forma más natural, sin cambiar la clasificación ni las cifras.
-- **RF-17**: Si la llamada al LLM falla, excede el timeout (8s por defecto) o devuelve una respuesta no interpretable, el sistema debe usar automáticamente la explicación basada en reglas para esa anomalía puntual, sin interrumpir el resto del pipeline.
+- **RF-17**: Si la llamada al LLM falla, excede el timeout (20s por defecto, con hasta 3 intentos y backoff exponencial ante errores transitorios — 429/503) o devuelve una respuesta no interpretable, el sistema debe usar automáticamente la explicación basada en reglas para esa anomalía puntual, sin interrumpir el resto del pipeline.
 
 #### Alertas críticas
 
@@ -190,7 +190,7 @@ Cada requisito funcional está identificado con un ID único, trazable a un endp
 
 - **RNF-01**: Una corrida completa de análisis sobre el dataset provisto (≈4000 lecturas) debe finalizar en menos de 5 segundos en condiciones normales (excluyendo la latencia de un LLM externo, si está habilitado).
 - **RNF-02**: Los endpoints de solo lectura (`GET /meters`, `GET /anomalies`, `GET /dashboard/summary`, etc.) deben responder en menos de 500ms bajo carga normal (dataset de referencia, sin concurrencia significativa).
-- **RNF-03**: El timeout de la llamada al LLM externo no debe exceder 8 segundos por anomalía, para no degradar el tiempo total de un análisis con muchas anomalías.
+- **RNF-03**: El timeout de la llamada al LLM externo (incluyendo reintentos) no debe exceder 20 segundos por anomalía. Como la explicación corre en el pipeline asíncrono de `POST /ai/analyze` (RF-19), este presupuesto no afecta la latencia percibida por el usuario, que solo hace polling del estado.
 
 ### 3.4 Restricciones de diseño
 
@@ -242,3 +242,4 @@ Cada requisito funcional está identificado con un ID único, trazable a un endp
 | Versión | Fecha | Cambios |
 |---|---|---|
 | 1.0 | 2026-09-26 | Versión inicial, cubre el sistema tal como está implementado (incluye LLM explainer y alertas Firebase como capacidades opcionales). |
+| 1.1 | 2026-09-27 | Actualiza RF-17/RNF-03: timeout del LLM subido de 8s a 20s con reintentos (backoff exponencial ante 429/503), sin impacto en la latencia percibida por correr en el pipeline asíncrono. |

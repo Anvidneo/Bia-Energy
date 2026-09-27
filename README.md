@@ -6,6 +6,18 @@ Plataforma de gestión energética con detección de anomalías: ingiere lectura
 - **Frontend**: React 19 + TypeScript + Vite — ver [`frontend/README.md`](frontend/README.md)
 - **Repo**: [github.com/Anvidneo/Bia-Energy](https://github.com/Anvidneo/Bia-Energy)
 
+## Despliegue en vivo
+
+| Servicio | URL |
+|---|---|
+| Frontend | https://bia-energy.juan-botero.dev |
+| Backend / API | https://bia-energy-backend.onrender.com |
+| Documentación (Swagger) | https://bia-energy-backend.onrender.com/swagger/index.html |
+
+CI/CD despliega automáticamente a ambos en cada push a `master` que pase tests + cobertura + Quality Gate de SonarCloud (ver sección CI/CD más abajo).
+
+> **Login**: la pantalla de inicio de sesión es únicamente visual (ver [`frontend/src/components/Login.tsx`](frontend/src/components/Login.tsx)) — no hay backend de autenticación en el alcance de esta prueba. Cualquier correo/contraseña con formato válido (no vacíos) deja entrar al dashboard; el objetivo es que la app se sienta como un producto real y no una colección de pantallas sueltas.
+
 ## Arquitectura
 
 ```
@@ -81,7 +93,7 @@ Ver el detalle completo en [`backend/README.md`](backend/README.md#motor-de-dete
 
 ## Flujo de demo (5-10 min)
 
-Login → Dashboard → Medidor M-109 → Ejecutar análisis IA → ver la anomalía detectada → abrir su detalle (explicación + acción recomendada).
+Login (cualquier correo/contraseña — ver nota en "Despliegue en vivo") → Dashboard → Medidor M-109 → Ejecutar análisis IA → ver la anomalía detectada → abrir su detalle (explicación + acción recomendada).
 
 ## Alcance — qué se construyó y qué no
 

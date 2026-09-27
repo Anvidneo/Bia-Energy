@@ -21,6 +21,31 @@ func TestDashboardSummaryEmpty(t *testing.T) {
 	}
 }
 
+func TestDashboardSummaryDBError(t *testing.T) {
+	conn := testDB(t)
+	router := testRouter(conn)
+	_ = conn.Close() // fails the very first query (count meters)
+
+	rec := doRequest(router, http.MethodGet, "/dashboard/summary")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 when the DB connection is unavailable", rec.Code)
+	}
+}
+
+func TestDashboardSummaryAnomaliesQueryError(t *testing.T) {
+	conn := testDB(t)
+	insertMeter(t, conn, "M-101") // meters query must succeed so the second query is the one that fails
+	if _, err := conn.Exec(`DROP TABLE anomalies`); err != nil {
+		t.Fatalf("dropping anomalies table: %v", err)
+	}
+	router := testRouter(conn)
+
+	rec := doRequest(router, http.MethodGet, "/dashboard/summary")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 when the anomalies table is unavailable", rec.Code)
+	}
+}
+
 func TestDashboardSummaryWithData(t *testing.T) {
 	conn := testDB(t)
 	insertMeter(t, conn, "M-101")

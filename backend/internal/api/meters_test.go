@@ -96,6 +96,39 @@ func TestGetMeterReadingsNotFound(t *testing.T) {
 	}
 }
 
+func TestListMetersDBError(t *testing.T) {
+	conn := testDB(t)
+	router := testRouter(conn)
+	_ = conn.Close() // force the query to fail rather than seeding bad data
+
+	rec := doRequest(router, http.MethodGet, "/meters")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 when the DB connection is unavailable", rec.Code)
+	}
+}
+
+func TestGetMeterDBError(t *testing.T) {
+	conn := testDB(t)
+	router := testRouter(conn)
+	_ = conn.Close()
+
+	rec := doRequest(router, http.MethodGet, "/meters/M-101")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (not 404) when the DB connection is unavailable", rec.Code)
+	}
+}
+
+func TestGetMeterReadingsDBError(t *testing.T) {
+	conn := testDB(t)
+	router := testRouter(conn)
+	_ = conn.Close()
+
+	rec := doRequest(router, http.MethodGet, "/meters/M-101/readings")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (not 404) when the DB connection is unavailable", rec.Code)
+	}
+}
+
 func TestGetMeterReadingsMeterExistsButHasNone(t *testing.T) {
 	conn := testDB(t)
 	insertMeter(t, conn, "M-101")

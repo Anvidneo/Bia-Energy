@@ -86,6 +86,30 @@ func TestPostAnalyzeRunsPipelineToCompletion(t *testing.T) {
 	}
 }
 
+// TestPostAnalyzeFailsWhenEventsTableMissing exercises
+// loadReadingsAndEvents' second query error branch specifically: the
+// readings query must succeed (so the DB-unavailable test above doesn't
+// already cover this) and the events query must be the one that fails.
+func TestPostAnalyzeFailsWhenEventsTableMissing(t *testing.T) {
+	conn := testDB(t)
+	insertReading(t, conn, "M-101", "2026-01-01 00:00:00", 12.5, 220.1, 5.2, 0.95)
+	if _, err := conn.Exec(`DROP TABLE events`); err != nil {
+		t.Fatalf("dropping events table: %v", err)
+	}
+	router := testRouter(conn)
+
+	rec := doRequest(router, http.MethodPost, "/ai/analyze")
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("POST /ai/analyze status = %d, want 202 (failure surfaces via polling)", rec.Code)
+	}
+	analysisID := decodeJSON[map[string]string](t, rec)["analysisId"]
+
+	result := waitForAnalysis(t, router, analysisID)
+	if result.Status != models.AnalysisError {
+		t.Fatalf("final status = %s, want error", result.Status)
+	}
+}
+
 func TestPostAnalyzeFailsWhenDBUnavailable(t *testing.T) {
 	conn := testDB(t)
 	// Close the connection before the pipeline can use it, forcing

@@ -67,6 +67,17 @@ func TestListAnomaliesOrderedByPriority(t *testing.T) {
 	}
 }
 
+func TestListAnomaliesDBError(t *testing.T) {
+	conn := testDB(t)
+	router := testRouter(conn)
+	_ = conn.Close()
+
+	rec := doRequest(router, http.MethodGet, "/anomalies")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 when the DB connection is unavailable", rec.Code)
+	}
+}
+
 func TestGetAnomalyFound(t *testing.T) {
 	conn := testDB(t)
 	id := insertAnomaly(t, conn, "M-101")

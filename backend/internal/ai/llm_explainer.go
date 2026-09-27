@@ -33,11 +33,18 @@ type LLMExplainer struct {
 
 // NewLLMExplainer builds an LLMExplainer backed by Gemini, falling back to
 // RuleExplainer on any failure.
+//
+// Timeout is generous (20s, vs. Gemini's own docs suggesting responses
+// usually land well under 10s) because geminiClient already retries 429s
+// and 503s internally with backoff, and Explain runs inside the
+// background POST /ai/analyze pipeline (see internal/api/ai.go), never on
+// an HTTP request goroutine — so there's no user-facing latency budget to
+// protect here, only "don't hang forever if Gemini is completely down".
 func NewLLMExplainer(apiKey, model string) LLMExplainer {
 	return LLMExplainer{
 		Client:   newGeminiClient(apiKey, model),
 		Fallback: RuleExplainer{},
-		Timeout:  8 * time.Second,
+		Timeout:  20 * time.Second,
 	}
 }
 
@@ -58,7 +65,7 @@ func (e LLMExplainer) Explain(a *models.Anomaly) {
 
 	timeout := e.Timeout
 	if timeout <= 0 {
-		timeout = 8 * time.Second
+		timeout = 20 * time.Second
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

@@ -66,7 +66,7 @@ Los 9 endpoints están documentados como anotaciones `@Summary`/`@Param`/`@Succe
 Para (re)generar el spec después de tocar cualquier anotación o agregar un endpoint:
 
 ```bash
-go install github.com/swaggo/swag/cmd/swag@latest   # una sola vez
+go install github.com/swaggo/swag/cmd/swag@v1.16.6   # una sola vez
 cd backend
 swag init -g cmd/api/main.go                          # genera ./docs (swagger.json, swagger.yaml, docs.go)
 ```

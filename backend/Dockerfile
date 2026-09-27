@@ -7,7 +7,7 @@ COPY . .
 # server.go blank-imports the generated Swagger docs package (see
 # internal/api/server.go) — it's never committed (see .gitignore), so it
 # must be generated here before the build, same as in CI (ci-cd.yml).
-RUN go install github.com/swaggo/swag/cmd/swag@latest && \
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && \
     swag init -g cmd/api/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/api ./cmd/api
 

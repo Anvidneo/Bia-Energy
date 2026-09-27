@@ -7,8 +7,11 @@ COPY . .
 # server.go blank-imports the generated Swagger docs package (see
 # internal/api/server.go) — it's never committed (see .gitignore), so it
 # must be generated here before the build, same as in CI (ci-cd.yml).
-RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && \
-    swag init -g cmd/api/main.go
+# swag is a go.mod `tool` dependency (see go.mod's `tool` block) — `go tool`
+# resolves and verifies it against go.sum instead of an ad-hoc `go install
+# ...@version`, which SonarCloud flags (docker:S7031) as an unpredictable,
+# unverified dependency install.
+RUN go tool swag init -g cmd/api/main.go
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/api ./cmd/api
 
 # --- runtime stage ---

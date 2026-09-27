@@ -63,15 +63,16 @@ Forma de una `Anomaly` (sección 10 del enunciado):
 
 Los 9 endpoints están documentados como anotaciones `@Summary`/`@Param`/`@Success`/... directamente sobre cada handler en `internal/api/*.go` (ver por ejemplo `handleGetMeter` en `meters.go`). [`swaggo/swag`](https://github.com/swaggo/swag) las lee y genera el spec OpenAPI — nunca se edita un YAML/JSON a mano, así que la documentación no se puede desincronizar del código sin que alguien lo note (basta con volver a generar).
 
-Para (re)generar el spec después de tocar cualquier anotación o agregar un endpoint:
+`swag` está declarado como *tool dependency* de Go 1.24+ (bloque `tool` en `go.mod`, fijado y verificado vía `go.sum` — no una instalación `@latest`/`@version` suelta, que SonarCloud marca como no determinística). Para (re)generar el spec después de tocar cualquier anotación o agregar un endpoint:
 
 ```bash
-go install github.com/swaggo/swag/cmd/swag@v1.16.6   # una sola vez
 cd backend
-swag init -g cmd/api/main.go                          # genera ./docs (swagger.json, swagger.yaml, docs.go)
+go tool swag init -g cmd/api/main.go   # genera ./docs (swagger.json, swagger.yaml, docs.go)
 ```
 
-`swag init` **debe correrse al menos una vez** antes de `go build`/`go test`: `cmd/api/main.go`... en realidad el import generado vive en `internal/api/server.go` (`_ "bia-energy/backend/docs"`), que no compila hasta que el paquete `docs/` exista. El directorio generado se versiona en el repo (no está en `.gitignore`) para que `go build` funcione sin depender de tener `swag` instalado en cada máquina/CI.
+Si `swag` no aparece todavía en `go list tool`, agrégalo una sola vez con `go get -tool github.com/swaggo/swag/cmd/swag@v1.16.6` y comitea el `go.mod`/`go.sum` resultante.
+
+`go tool swag init` **debe correrse al menos una vez** antes de `go build`/`go test`: el import generado vive en `internal/api/server.go` (`_ "bia-energy/backend/docs"`), que no compila hasta que el paquete `docs/` exista. El directorio generado NO se versiona (está en `.gitignore`) — se regenera en cada build (CI y el `Dockerfile` de Render ya lo hacen automáticamente).
 
 Con el backend corriendo, la UI queda en `http://localhost:8080/swagger/index.html` (en producción, `https://<tu-servicio-en-render>/swagger/index.html`); el spec crudo está en `/swagger/doc.json`.
 

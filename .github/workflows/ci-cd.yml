@@ -34,10 +34,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-      - name: Install swag CLI
-        run: go install github.com/swaggo/swag/cmd/swag@v1.16.6
       - name: Generate Swagger docs
-        run: swag init -g cmd/api/main.go
+        run: go tool swag init -g cmd/api/main.go
       - run: go build ./...
       - run: go test ./...
 
@@ -83,11 +81,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-      - name: Install swag CLI
-        run: go install github.com/swaggo/swag/cmd/swag@v1.16.6
       - name: Generate Swagger docs
         working-directory: backend
-        run: swag init -g cmd/api/main.go
+        run: go tool swag init -g cmd/api/main.go
       - name: Backend tests with coverage
         working-directory: backend
         run: go test ./... -coverprofile=coverage.out

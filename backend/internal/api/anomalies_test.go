@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"bia-energy/backend/internal/models"
 )
@@ -37,6 +38,32 @@ func TestListAnomaliesReturnsSeededRows(t *testing.T) {
 		if !a.Anomaly || a.Type != models.TypeRealAnomaly || a.Severity != models.SeverityHigh {
 			t.Errorf("unexpected anomaly shape: %+v", a)
 		}
+	}
+}
+
+// TestListAnomaliesOrderedByPriority pins GET /anomalies' actual ordering
+// against the enunciado's own section 11 example (HIGH, HIGH, MEDIUM, LOW)
+// and the "Prioriza M-109" grading criterion — a meter detected earlier but
+// more severe must still come first.
+func TestListAnomaliesOrderedByPriority(t *testing.T) {
+	conn := testDB(t)
+	now := time.Now()
+	low := insertAnomalyDetailed(t, conn, "M-106", "LOW", 0.60, now.Add(-1*time.Hour))
+	m109 := insertAnomalyDetailed(t, conn, "M-109", "HIGH", 0.92, now.Add(-3*time.Hour))
+	medium := insertAnomalyDetailed(t, conn, "M-104", "MEDIUM", 0.99, now.Add(-2*time.Hour))
+	otherHigh := insertAnomalyDetailed(t, conn, "M-112", "HIGH", 0.80, now)
+	router := testRouter(conn)
+
+	rec := doRequest(router, http.MethodGet, "/anomalies")
+	anomalies := decodeJSON[[]models.Anomaly](t, rec)
+	if len(anomalies) != 4 {
+		t.Fatalf("got %d anomalies, want 4", len(anomalies))
+	}
+
+	got := []int64{anomalies[0].ID, anomalies[1].ID, anomalies[2].ID, anomalies[3].ID}
+	want := []int64{m109, otherHigh, medium, low}
+	if got[0] != want[0] || got[1] != want[1] || got[2] != want[2] || got[3] != want[3] {
+		t.Fatalf("got order %v, want %v (HIGH by confidence, then MEDIUM, then LOW — never plain detected_at)", got, want)
 	}
 }
 

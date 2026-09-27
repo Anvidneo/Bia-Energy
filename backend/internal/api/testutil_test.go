@@ -174,3 +174,22 @@ func insertAnomaly(t *testing.T, conn *sql.DB, meterID string) int64 {
 	}
 	return id
 }
+
+// insertAnomalyDetailed is insertAnomaly's parametrized sibling, for tests
+// that need specific severity/confidence/detected_at combinations — e.g.
+// asserting GET /anomalies' priority ordering, which insertAnomaly's fixed
+// HIGH/0.9/now() values can't exercise.
+func insertAnomalyDetailed(t *testing.T, conn *sql.DB, meterID, severity string, confidence float64, detectedAt time.Time) int64 {
+	t.Helper()
+	insertMeter(t, conn, meterID)
+	var id int64
+	err := conn.QueryRow(`
+		INSERT INTO anomalies
+			(meter_id, detected_at, type, severity, confidence, reason, recommended_action, evidence_json, analysis_id)
+		VALUES ($1, $2, 'REAL_ANOMALY', $3, $4, 'test reason', 'test action', '{}', 'an_test')
+		RETURNING id`, meterID, detectedAt, severity, confidence).Scan(&id)
+	if err != nil {
+		t.Fatalf("inserting detailed anomaly for %s: %v", meterID, err)
+	}
+	return id
+}

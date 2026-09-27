@@ -120,6 +120,24 @@ describe('Dashboard', () => {
     expect(await screen.findByText(/Sin anomalías todavía/)).toBeTruthy()
   })
 
+  it('orders the recent-anomalies feed by detected_at, not by the array order it receives', async () => {
+    // Fed in ascending (oldest-first) order — the opposite of what the feed
+    // should show — so this only passes if the component sorts itself
+    // rather than trusting incoming order (the API now prioritizes by
+    // severity, not by recency; see backend's sortAnomaliesByPriority).
+    const older = makeAnomaly({ id: 1, meter_id: 'M-101', detected_at: '2026-09-01T00:00:00Z' })
+    const newer = makeAnomaly({ id: 2, meter_id: 'M-102', detected_at: '2026-09-03T00:00:00Z' })
+    vi.mocked(getDashboardSummary).mockResolvedValue(SUMMARY)
+    vi.mocked(listAnomalies).mockResolvedValue([older, newer])
+
+    render(<Dashboard onSelectAnomaly={() => {}} />)
+    const feedTitles = await screen.findAllByText(/M-10[12]/, { selector: '.feed-title' })
+    expect(feedTitles.map((el) => el.textContent)).toEqual([
+      expect.stringContaining('M-102'),
+      expect.stringContaining('M-101'),
+    ])
+  })
+
   it('calls onSelectAnomaly when a recent-anomaly feed item is clicked', async () => {
     const onSelectAnomaly = vi.fn()
     const anomaly = makeAnomaly({ id: 5, meter_id: 'M-105' })

@@ -64,6 +64,14 @@ export function Dashboard({ onSelectAnomaly }: Props) {
     (anomalies ?? []).filter((a) => a.meter_id === chartMeter).map((a) => a.detected_at),
   )
 
+  // The API/AnomaliesTable order anomalies by priority (severity first —
+  // see backend's sortAnomaliesByPriority), but this feed is explicitly a
+  // "recientes" (recent activity) widget, so it sorts by detected_at
+  // itself instead of trusting the incoming order.
+  const recentAnomalies = [...(anomalies ?? [])].sort(
+    (a, b) => new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime(),
+  ).slice(0, 4)
+
   return (
     <>
       <section aria-label="Resumen" className="hero">
@@ -146,7 +154,7 @@ export function Dashboard({ onSelectAnomaly }: Props) {
 
         <div className="card">
           <h3>Anomalías recientes</h3>
-          {(anomalies ?? []).slice(0, 4).map((a) => (
+          {recentAnomalies.map((a) => (
             <div key={a.id} className="feed-item" onClick={() => onSelectAnomaly(a)} role="button" tabIndex={0} style={{ cursor: 'pointer' }}>
               <div className="feed-icon" style={{ background: tintColorVar(a) }}>
                 <span className="dot" style={{ background: dotColorVar(a) }} />

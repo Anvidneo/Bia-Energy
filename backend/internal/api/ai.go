@@ -120,6 +120,9 @@ func (d *Deps) runAnalysis(id string) {
 	}
 
 	setStage(pipelineStages[6]) // Recomendacion
+	// Most-severe-first, not chronological — see sortAnomaliesByPriority's
+	// comment for why (enunciado section 11 + "Prioriza M-109").
+	sortAnomaliesByPriority(anomalies)
 	if err := d.persistAnomalies(ctx, id, anomalies); err != nil {
 		d.failAnalysis(id, err)
 		return

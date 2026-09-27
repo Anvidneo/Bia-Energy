@@ -37,10 +37,12 @@ func scanAnomaly(row interface {
 }
 
 // handleListAnomalies lists every anomaly from the latest persisted
-// analysis run.
+// analysis run, most severe first (ties broken by confidence, then by
+// recency) — see sortAnomaliesByPriority for why this isn't a plain
+// chronological feed.
 //
 // @Summary      Listar anomalías
-// @Description  Anomalías de la última corrida de análisis persistida, más reciente primero.
+// @Description  Anomalías de la última corrida de análisis persistida, priorizadas por severidad (luego confianza y fecha).
 // @Tags         anomalies
 // @Produce      json
 // @Success      200  {array}   models.Anomaly
@@ -50,7 +52,11 @@ func (d *Deps) handleListAnomalies(w http.ResponseWriter, r *http.Request) {
 	rows, err := d.DB.QueryContext(r.Context(), `
 		SELECT id, meter_id, detected_at, type, severity, confidence,
 		       reason, recommended_action, related_event_type, related_event_at, evidence_json
-		FROM anomalies ORDER BY detected_at DESC`)
+		FROM anomalies
+		ORDER BY
+			CASE severity WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 1 ELSE 0 END DESC,
+			confidence DESC,
+			detected_at DESC`)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

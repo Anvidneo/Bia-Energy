@@ -1,7 +1,7 @@
 # Especificación de Requisitos de Software (SRS)
 ## Bia Energy — Plataforma de Gestión Energética con Detección de Anomalías
 
-**Versión:** 1.1
+**Versión:** 1.2
 **Fecha:** 2026-09-27
 **Estándar de referencia:** IEEE 830-1998
 
@@ -180,6 +180,7 @@ Cada requisito funcional está identificado con un ID único, trazable a un endp
 - **RF-20**: El sistema debe exponer `GET /ai/analysis/{id}` para consultar (polling) el estado de una corrida (`pending`/`processing`/`done`/`error`) y su etapa actual.
 - **RF-21**: Al completarse, una corrida debe reemplazar el contenido de la tabla de anomalías con los resultados de esa corrida ("last run wins").
 - **RF-22**: El sistema debe exponer `GET /anomalies` (listado) y `GET /anomalies/{id}` (detalle) sobre la última corrida persistida.
+- **RF-22b**: El listado de `GET /anomalies` debe priorizarse por severidad (`HIGH` > `MEDIUM` > `LOW`), usando confianza y luego fecha de detección como desempate — no debe ser un orden puramente cronológico. El panel "Anomalías recientes" del dashboard (UI-02) es la única excepción intencional: al ser un feed de actividad reciente, ordena explícitamente por fecha de detección en el frontend, independiente del orden que entregue la API.
 
 #### Documentación de API
 
@@ -243,3 +244,4 @@ Cada requisito funcional está identificado con un ID único, trazable a un endp
 |---|---|---|
 | 1.0 | 2026-09-26 | Versión inicial, cubre el sistema tal como está implementado (incluye LLM explainer y alertas Firebase como capacidades opcionales). |
 | 1.1 | 2026-09-27 | Actualiza RF-17/RNF-03: timeout del LLM subido de 8s a 20s con reintentos (backoff exponencial ante 429/503), sin impacto en la latencia percibida por correr en el pipeline asíncrono. |
+| 1.2 | 2026-09-27 | Agrega RF-22b: `GET /anomalies` pasa de orden cronológico a priorizado por severidad/confianza/fecha; el panel "Anomalías recientes" del dashboard mantiene explícitamente orden cronológico como excepción documentada. |
